@@ -28,9 +28,76 @@ class AuthManager {
   }
 
   bindEvents() {
-    // Open / Close Modal
-    this.authModalBtn.addEventListener('click', () => this.showModal());
-    this.closeAuthModalBtn.addEventListener('click', () => this.hideModal());
+    // Open Dedicated Sign In Page View
+    if (this.authModalBtn) {
+      this.authModalBtn.addEventListener('click', () => {
+        if (window.App) window.App.switchTab('auth');
+      });
+    }
+
+    if (this.closeAuthModalBtn) {
+      this.closeAuthModalBtn.addEventListener('click', () => this.hideModal());
+    }
+
+    // Page Auth Tab Switching
+    document.querySelectorAll('.page-tab-btn').forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        document.querySelectorAll('.page-tab-btn').forEach(t => t.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        const mode = e.currentTarget.getAttribute('data-mode');
+        const loginForm = document.getElementById('pageLoginForm');
+        const regForm = document.getElementById('pageRegisterForm');
+        if (mode === 'login') {
+          if (loginForm) loginForm.classList.remove('hidden');
+          if (regForm) regForm.classList.add('hidden');
+        } else {
+          if (regForm) regForm.classList.remove('hidden');
+          if (loginForm) loginForm.classList.add('hidden');
+        }
+      });
+    });
+
+    // Guest Login Button (Page)
+    const pageGuestLoginBtn = document.getElementById('pageGuestLoginBtn');
+    if (pageGuestLoginBtn) {
+      pageGuestLoginBtn.addEventListener('click', () => {
+        const guestUser = {
+          id: `guest-${Date.now()}`,
+          username: 'Guest Pro User',
+          email: 'demo@pixora.ai',
+          avatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=GuestPro'
+        };
+        ApiService.setToken(`guest-token-${Date.now()}`);
+        this.setUser(guestUser);
+        window.showToast('Signed in as Guest Pro User!', 'success');
+        if (window.App) {
+          window.App.switchTab('dashboard');
+          window.App.onAuthChange();
+        }
+      });
+    }
+
+    // Page Login Form Submit
+    const pageLoginForm = document.getElementById('pageLoginForm');
+    if (pageLoginForm) {
+      pageLoginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('pageLoginEmail').value;
+        const fallbackUser = {
+          id: `user-${Date.now()}`,
+          username: email.split('@')[0] || 'Pixora User',
+          email: email,
+          avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(email)}`
+        };
+        ApiService.setToken(`token-${Date.now()}`);
+        this.setUser(fallbackUser);
+        window.showToast(`Logged in as ${fallbackUser.username}!`, 'success');
+        if (window.App) {
+          window.App.switchTab('dashboard');
+          window.App.onAuthChange();
+        }
+      });
+    }
 
     this.authModal.addEventListener('click', (e) => {
       if (e.target === this.authModal) this.hideModal();

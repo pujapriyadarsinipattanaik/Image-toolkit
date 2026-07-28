@@ -958,6 +958,64 @@
           <!-- GALLERY GRID -->
           <div id="galleryGrid" class="image-grid mt-4">
             <!-- Dynamic items rendered via JS -->
+      <!-- 7. FULL SIGN IN & REGISTRATION PAGE VIEW -->
+      <section id="tab-auth" class="tab-page">
+        <div class="auth-page-container">
+          <div class="auth-page-card glass-card">
+            
+            <div class="auth-page-header text-center">
+              <div class="logo-icon large-icon margin-auto">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+              </div>
+              <h2 class="mt-2">Welcome to <span class="gradient-text">Pixora AI Pro</span></h2>
+              <p class="subtext mt-1">Sign in to save your artwork, cloud history, and unlocked studio features.</p>
+            </div>
+
+            <div class="auth-tabs mt-4">
+              <button class="auth-tab page-tab-btn active" data-mode="login">Sign In</button>
+              <button class="auth-tab page-tab-btn" data-mode="register">Create Account</button>
+            </div>
+
+            <!-- PAGE LOGIN FORM -->
+            <form id="pageLoginForm" class="auth-form mt-3 active">
+              <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <input type="email" id="pageLoginEmail" class="form-control" required value="demo@pixora.ai" placeholder="user@example.com">
+              </div>
+              <div class="form-group mt-2">
+                <label class="form-label">Password</label>
+                <input type="password" id="pageLoginPassword" class="form-control" required value="123456" placeholder="••••••••">
+              </div>
+              <button type="submit" class="btn btn-primary btn-block btn-lg mt-3">
+                <i class="fa-solid fa-right-to-bracket"></i> Sign In to Account
+              </button>
+
+              <div class="divider text-center mt-3 mb-2"><span class="subtext">OR</span></div>
+
+              <button type="button" id="pageGuestLoginBtn" class="btn btn-secondary btn-block btn-lg">
+                <i class="fa-solid fa-bolt"></i> ⚡ 1-Click Quick Guest Sign In
+              </button>
+            </form>
+
+            <!-- PAGE REGISTER FORM -->
+            <form id="pageRegisterForm" class="auth-form mt-3 hidden">
+              <div class="form-group">
+                <label class="form-label">Full Name / Username</label>
+                <input type="text" id="pageRegUsername" class="form-control" required placeholder="John Doe">
+              </div>
+              <div class="form-group mt-2">
+                <label class="form-label">Email Address</label>
+                <input type="email" id="pageRegEmail" class="form-control" required placeholder="user@example.com">
+              </div>
+              <div class="form-group mt-2">
+                <label class="form-label">Password</label>
+                <input type="password" id="pageRegPassword" class="form-control" required placeholder="At least 6 characters">
+              </div>
+              <button type="submit" class="btn btn-primary btn-block btn-lg mt-3">
+                <i class="fa-solid fa-user-plus"></i> Create Free Pro Account
+              </button>
+            </form>
+
           </div>
         </div>
       </section>

@@ -429,6 +429,29 @@ h1, h2, h3, h4, h5, h6 {
 .text-danger { color: #ef4444; }
 .text-cyan { color: var(--primary-cyan); }
 
+/* FULL SIGN IN PAGE VIEW */
+.auth-page-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 75vh;
+  padding: 2rem 1rem;
+}
+.auth-page-card {
+  width: 100%;
+  max-width: 480px;
+  padding: 2.5rem;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+}
+.logo-icon.large-icon {
+  width: 60px;
+  height: 60px;
+  font-size: 1.8rem;
+  margin: 0 auto;
+}
+.margin-auto { margin-left: auto; margin-right: auto; }
+
 /* UTILITY CLASSES */
 .hidden { display: none !important; }
 .mt-1 { margin-top: 0.25rem; }

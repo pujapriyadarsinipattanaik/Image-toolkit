@@ -629,8 +629,13 @@ class CanvasEditor {
     window.showToast('Unwanted object erased cleanly!', 'success');
   }
 
-  // Resize / Crop canvas
+  // True Crop & Resize Canvas
   applyResize() {
+    if (!this.loadedImage) {
+      window.showToast('Please load an image first', 'info');
+      return;
+    }
+
     const newWidth = parseInt(this.resizeWidth.value);
     const newHeight = parseInt(this.resizeHeight.value);
 
@@ -641,24 +646,71 @@ class CanvasEditor {
 
     this.saveState();
 
+    const currentW = this.mainCanvas.width;
+    const currentH = this.mainCanvas.height;
+
+    // Calculate center crop region
+    let cropW = newWidth;
+    let cropH = newHeight;
+    let cropX = 0;
+    let cropY = 0;
+
+    if (cropW <= currentW && cropH <= currentH) {
+      cropX = Math.floor((currentW - cropW) / 2);
+      cropY = Math.floor((currentH - cropH) / 2);
+    } else {
+      const targetRatio = newWidth / newHeight;
+      const currentRatio = currentW / currentH;
+
+      if (currentRatio > targetRatio) {
+        cropH = currentH;
+        cropW = Math.floor(currentH * targetRatio);
+        cropX = Math.floor((currentW - cropW) / 2);
+        cropY = 0;
+      } else {
+        cropW = currentW;
+        cropH = Math.floor(currentW / targetRatio);
+        cropX = 0;
+        cropY = Math.floor((currentH - cropH) / 2);
+      }
+    }
+
+    // Render cropped section to temporary canvas
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = newWidth;
     tempCanvas.height = newHeight;
     const tempCtx = tempCanvas.getContext('2d');
-    tempCtx.drawImage(this.mainCanvas, 0, 0, newWidth, newHeight);
 
+    tempCtx.imageSmoothingEnabled = true;
+    tempCtx.imageSmoothingQuality = 'high';
+    tempCtx.drawImage(
+      this.mainCanvas,
+      cropX, cropY, cropW, cropH,
+      0, 0, newWidth, newHeight
+    );
+
+    // Resize main and mask canvases
     this.mainCanvas.width = newWidth;
     this.mainCanvas.height = newHeight;
     this.maskCanvas.width = newWidth;
     this.maskCanvas.height = newHeight;
 
     this.ctx.drawImage(tempCanvas, 0, 0);
+
+    // Update loaded image base reference
+    const updatedImg = new Image();
+    updatedImg.onload = () => {
+      this.loadedImage = updatedImg;
+      this.originalImageData = this.ctx.getImageData(0, 0, newWidth, newHeight);
+    };
+    updatedImg.src = tempCanvas.toDataURL('image/png');
+
     if (this.dimensionsBadge) {
       this.dimensionsBadge.textContent = `${newWidth} x ${newHeight} px`;
     }
     this.clearMask();
 
-    window.showToast(`Resized canvas to ${newWidth}x${newHeight}px`, 'success');
+    window.showToast(`Cropped & resized canvas to ${newWidth}x${newHeight}px`, 'success');
   }
 
   // Export & Download Image

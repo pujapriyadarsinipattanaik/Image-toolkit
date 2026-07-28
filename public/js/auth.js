@@ -101,6 +101,30 @@ class AuthManager {
       });
     }
 
+    // Page Register Form Submit
+    const pageRegisterForm = document.getElementById('pageRegisterForm');
+    if (pageRegisterForm) {
+      pageRegisterForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('pageRegUsername')?.value || 'New Pro User';
+        const email = document.getElementById('pageRegEmail')?.value || 'user@example.com';
+
+        const fallbackUser = {
+          id: `user-${Date.now()}`,
+          username: username,
+          email: email,
+          avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(username)}`
+        };
+        ApiService.setToken(`token-${Date.now()}`);
+        this.setUser(fallbackUser);
+        window.showToast(`Account created! Welcome ${fallbackUser.username}`, 'success');
+        if (window.App) {
+          window.App.switchTab('dashboard');
+          window.App.onAuthChange();
+        }
+      });
+    }
+
     // Modal Login Form Submit
     if (this.loginForm) {
       this.loginForm.addEventListener('submit', async (e) => {

@@ -694,13 +694,33 @@
                     <div class="filter-preview preview-cyberpunk"></div>
                     <span>Cyberpunk</span>
                   </div>
-                  <div class="filter-card" data-filter="duotone">
-                    <div class="filter-preview preview-duotone"></div>
-                    <span>Duotone</span>
-                  </div>
                   <div class="filter-card" data-filter="vintage">
                     <div class="filter-preview preview-vintage"></div>
                     <span>Vintage</span>
+                  </div>
+                  <div class="filter-card" data-filter="dramatic-noir">
+                    <div class="filter-preview preview-noir"></div>
+                    <span>Dramatic Noir</span>
+                  </div>
+                  <div class="filter-card" data-filter="warm-sunset">
+                    <div class="filter-preview preview-sunset"></div>
+                    <span>Warm Sunset</span>
+                  </div>
+                  <div class="filter-card" data-filter="emerald-forest">
+                    <div class="filter-preview preview-emerald"></div>
+                    <span>Emerald</span>
+                  </div>
+                  <div class="filter-card" data-filter="pastel-dream">
+                    <div class="filter-preview preview-pastel"></div>
+                    <span>Pastel Dream</span>
+                  </div>
+                  <div class="filter-card" data-filter="hdr-pop">
+                    <div class="filter-preview preview-hdr"></div>
+                    <span>HDR Pop</span>
+                  </div>
+                  <div class="filter-card" data-filter="duotone">
+                    <div class="filter-preview preview-duotone"></div>
+                    <span>Duotone</span>
                   </div>
                   <div class="filter-card" data-filter="sepia">
                     <div class="filter-preview preview-sepia"></div>
@@ -749,25 +769,41 @@
 
               <!-- 5. STICKERS & TEXT PANEL -->
               <div id="panel-stickers" class="tool-panel">
-                <h3>Text & Graphic Stickers</h3>
-                <p class="tool-desc">Click any sticker below to stamp graphic elements onto your image.</p>
+                <h3>Text & Graphic Stickers (24+ Icons)</h3>
+                <p class="tool-desc">Click any sticker below, then click or drag on your image canvas to place it.</p>
 
                 <div class="sticker-chips-grid">
+                  <div class="sticker-chip active" data-sticker="⭐">⭐</div>
                   <div class="sticker-chip" data-sticker="🔥">🔥</div>
-                  <div class="sticker-chip" data-sticker="⭐">⭐</div>
                   <div class="sticker-chip" data-sticker="✨">✨</div>
                   <div class="sticker-chip" data-sticker="❤️">❤️</div>
                   <div class="sticker-chip" data-sticker="👑">👑</div>
                   <div class="sticker-chip" data-sticker="🚀">🚀</div>
                   <div class="sticker-chip" data-sticker="⚡">⚡</div>
                   <div class="sticker-chip" data-sticker="🎨">🎨</div>
+                  <div class="sticker-chip" data-sticker="💎">💎</div>
+                  <div class="sticker-chip" data-sticker="🌟">🌟</div>
+                  <div class="sticker-chip" data-sticker="🌈">🌈</div>
+                  <div class="sticker-chip" data-sticker="🎯">🎯</div>
+                  <div class="sticker-chip" data-sticker="💯">💯</div>
+                  <div class="sticker-chip" data-sticker="🍀">🍀</div>
+                  <div class="sticker-chip" data-sticker="☀️">☀️</div>
+                  <div class="sticker-chip" data-sticker="🌙">🌙</div>
+                  <div class="sticker-chip" data-sticker="📸">📸</div>
+                  <div class="sticker-chip" data-sticker="🎵">🎵</div>
+                  <div class="sticker-chip" data-sticker="🏆">🏆</div>
+                  <div class="sticker-chip" data-sticker="💬">💬</div>
+                  <div class="sticker-chip" data-sticker="💥">💥</div>
+                  <div class="sticker-chip" data-sticker="🦄">🦄</div>
+                  <div class="sticker-chip" data-sticker="🎃">🎃</div>
+                  <div class="sticker-chip" data-sticker="🎁">🎁</div>
                 </div>
               </div>
 
-              <!-- 6. BACKGROUND REMOVER PANEL -->
+              <!-- 6. BACKGROUND REMOVER & REPLACEMENT PANEL -->
               <div id="panel-bg" class="tool-panel">
-                <h3>AI Background Remover</h3>
-                <p class="tool-desc">Extract the primary subject and automatically remove background colors.</p>
+                <h3>AI Background Studio</h3>
+                <p class="tool-desc">Remove background and replace with new solid colors, gradients, or custom images.</p>
 
                 <div class="slider-control">
                   <div class="slider-header">
@@ -788,8 +824,22 @@
                 </div>
 
                 <button id="processBgRemovalBtn" class="btn btn-primary btn-block">
-                  <i class="fa-solid fa-wand-magic-sparkles"></i> Remove Background
+                  <i class="fa-solid fa-scissors"></i> 1-Click Background Remover
                 </button>
+
+                <!-- NEW BACKGROUND REPLACEMENT OPTIONS -->
+                <div class="form-group mt-3">
+                  <label class="form-label">Replace Background Color</label>
+                  <div class="chip-group">
+                    <button class="chip bg-replace-chip" data-color="transparent">🏁 Transparent</button>
+                    <button class="chip bg-replace-chip" data-color="#0d0f17">🖤 Dark</button>
+                    <button class="chip bg-replace-chip" data-color="#ffffff">🤍 White</button>
+                    <button class="chip bg-replace-chip" data-color="#00f2fe">🩵 Cyan</button>
+                    <button class="chip bg-replace-chip" data-color="#7f00ff">💜 Purple</button>
+                    <button class="chip bg-replace-chip" data-color="#ff0844">🔴 Red</button>
+                    <button class="chip bg-replace-chip" data-color="#10b981">🟢 Green</button>
+                  </div>
+                </div>
               </div>
 
               <!-- 7. MAGIC OBJECT ERASER PANEL -->

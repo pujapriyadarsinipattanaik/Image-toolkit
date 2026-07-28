@@ -236,7 +236,7 @@ class CanvasEditor {
       });
     });
 
-    // Background Removal Action
+    // Background Removal & Color Replacement Action
     if (this.bgToleranceRange) {
       this.bgToleranceRange.addEventListener('input', (e) => {
         const val = document.getElementById('bgToleranceVal');
@@ -246,6 +246,16 @@ class CanvasEditor {
     if (this.processBgRemovalBtn) {
       this.processBgRemovalBtn.addEventListener('click', () => this.removeBackground());
     }
+
+    // Background Replacement Color Chips
+    document.querySelectorAll('.bg-replace-chip').forEach(chip => {
+      chip.addEventListener('click', (e) => {
+        document.querySelectorAll('.bg-replace-chip').forEach(c => c.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        const color = e.currentTarget.getAttribute('data-color');
+        this.replaceBackgroundColor(color);
+      });
+    });
 
     // Eraser brush slider
     if (this.brushSizeRange) {
@@ -688,7 +698,47 @@ class CanvasEditor {
     }
 
     this.ctx.putImageData(imageData, 0, 0);
+
+    const updatedImg = new Image();
+    updatedImg.onload = () => {
+      this.loadedImage = updatedImg;
+      this.originalImageData = this.ctx.getImageData(0, 0, width, height);
+    };
+    updatedImg.src = this.mainCanvas.toDataURL('image/png');
+
     window.showToast('Background removed successfully!', 'success');
+  }
+
+  // Replace background color behind subject
+  replaceBackgroundColor(color) {
+    if (!this.loadedImage) return;
+
+    this.saveState();
+    const width = this.mainCanvas.width;
+    const height = this.mainCanvas.height;
+
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = width;
+    tempCanvas.height = height;
+    const tempCtx = tempCanvas.getContext('2d');
+
+    if (color !== 'transparent') {
+      tempCtx.fillStyle = color;
+      tempCtx.fillRect(0, 0, width, height);
+    }
+
+    tempCtx.drawImage(this.mainCanvas, 0, 0);
+    this.ctx.clearRect(0, 0, width, height);
+    this.ctx.drawImage(tempCanvas, 0, 0);
+
+    const updatedImg = new Image();
+    updatedImg.onload = () => {
+      this.loadedImage = updatedImg;
+      this.originalImageData = this.ctx.getImageData(0, 0, width, height);
+    };
+    updatedImg.src = tempCanvas.toDataURL('image/png');
+
+    window.showToast(`Background set to ${color === 'transparent' ? 'transparent' : color}`, 'success');
   }
 
   // Magic Eraser Mask Drawing

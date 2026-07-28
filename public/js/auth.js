@@ -82,15 +82,41 @@ class AuthManager {
     if (pageLoginForm) {
       pageLoginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const email = document.getElementById('pageLoginEmail').value;
+        const username = document.getElementById('pageLoginUsername')?.value || 'Demo Pro User';
+        const email = document.getElementById('pageLoginEmail')?.value || 'demo@pixora.ai';
+        
         const fallbackUser = {
           id: `user-${Date.now()}`,
-          username: email.split('@')[0] || 'Pixora User',
+          username: username,
           email: email,
-          avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(email)}`
+          avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(username)}`
         };
         ApiService.setToken(`token-${Date.now()}`);
         this.setUser(fallbackUser);
+        window.showToast(`Welcome back, ${fallbackUser.username}!`, 'success');
+        if (window.App) {
+          window.App.switchTab('dashboard');
+          window.App.onAuthChange();
+        }
+      });
+    }
+
+    // Modal Login Form Submit
+    if (this.loginForm) {
+      this.loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('loginUsername')?.value || 'Demo Pro User';
+        const email = document.getElementById('loginEmail')?.value || 'demo@pixora.ai';
+
+        const fallbackUser = {
+          id: `user-${Date.now()}`,
+          username: username,
+          email: email,
+          avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(username)}`
+        };
+        ApiService.setToken(`token-${Date.now()}`);
+        this.setUser(fallbackUser);
+        this.hideModal();
         window.showToast(`Logged in as ${fallbackUser.username}!`, 'success');
         if (window.App) {
           window.App.switchTab('dashboard');

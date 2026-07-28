@@ -158,6 +158,45 @@ class CanvasEditor {
         this.toolPanels.forEach(p => p.classList.remove('active'));
         const panel = document.getElementById(targetPanel);
         if (panel) panel.classList.add('active');
+
+        // Only enable mask drawing pointer events when Eraser tool is active
+        if (targetPanel === 'panel-eraser') {
+          this.maskCanvas.style.pointerEvents = 'auto';
+          this.maskCanvas.style.cursor = 'crosshair';
+          window.showToast('Magic Eraser active. Brush over unwanted elements.', 'info');
+        } else {
+          this.maskCanvas.style.pointerEvents = 'none';
+          this.maskCanvas.style.cursor = 'default';
+        }
+      });
+    });
+
+    // Crop Aspect Ratio Presets
+    document.querySelectorAll('.crop-preset-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.crop-preset-btn').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+
+        if (!this.loadedImage) return;
+
+        const ratio = e.currentTarget.getAttribute('data-ratio');
+        const imgW = this.mainCanvas.width;
+        const imgH = this.mainCanvas.height;
+
+        if (ratio === '1:1') {
+          const side = Math.min(imgW, imgH);
+          if (this.resizeWidth) this.resizeWidth.value = side;
+          if (this.resizeHeight) this.resizeHeight.value = side;
+        } else if (ratio === '16:9') {
+          if (this.resizeWidth) this.resizeWidth.value = imgW;
+          if (this.resizeHeight) this.resizeHeight.value = Math.round(imgW * (9 / 16));
+        } else if (ratio === '4:3') {
+          if (this.resizeWidth) this.resizeWidth.value = imgW;
+          if (this.resizeHeight) this.resizeHeight.value = Math.round(imgW * (3 / 4));
+        } else {
+          if (this.resizeWidth) this.resizeWidth.value = imgW;
+          if (this.resizeHeight) this.resizeHeight.value = imgH;
+        }
       });
     });
 

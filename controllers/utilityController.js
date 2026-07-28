@@ -51,7 +51,6 @@ exports.convertFormat = async (req, res) => {
       mimeType = 'image/webp';
       ext = '.webp';
     } else {
-      // JPEG / JPG
       sharpInstance = sharpInstance.jpeg({ quality: Math.min(100, Math.max(1, quality)), mozjpeg: true });
       outputFormat = 'jpeg';
       mimeType = 'image/jpeg';
@@ -195,22 +194,16 @@ exports.rotateFlip = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No image file uploaded' });
     }
 
-    const angle = parseInt(req.body.angle) || 0; // 90, 180, 270
+    const angle = parseInt(req.body.angle) || 0;
     const flipHorizontal = req.body.flipHorizontal === 'true' || req.body.flipHorizontal === true;
     const flipVertical = req.body.flipVertical === 'true' || req.body.flipVertical === true;
 
     const inputBuffer = await getBufferFromFile(req.file);
     let sharpInstance = sharp(inputBuffer);
 
-    if (angle > 0) {
-      sharpInstance = sharpInstance.rotate(angle);
-    }
-    if (flipHorizontal) {
-      sharpInstance = sharpInstance.flop();
-    }
-    if (flipVertical) {
-      sharpInstance = sharpInstance.flip();
-    }
+    if (angle > 0) sharpInstance = sharpInstance.rotate(angle);
+    if (flipHorizontal) sharpInstance = sharpInstance.flop();
+    if (flipVertical) sharpInstance = sharpInstance.flip();
 
     const outputBuffer = await sharpInstance.toBuffer();
     const metadata = await sharp(outputBuffer).metadata();
@@ -312,5 +305,102 @@ exports.convertToBase64 = async (req, res) => {
   } catch (error) {
     console.error('Base64 Conversion Error:', error);
     res.status(500).json({ success: false, message: 'Base64 conversion failed: ' + error.message });
+  }
+};
+
+// 7. Get Image EXIF & Properties Metadata
+exports.getMetadata = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No image file uploaded' });
+    }
+
+    const inputBuffer = await getBufferFromFile(req.file);
+    const metadata = await sharp(inputBuffer).metadata();
+
+    const aspectRatio = metadata.width && metadata.height
+      ? (metadata.width / metadata.height).toFixed(2)
+      : 'N/A';
+
+    res.json({
+      success: true,
+      filename: req.file.originalname,
+      fileSize: req.file.size,
+      fileSizeFormatted: (req.file.size / (1024 * 1024)).toFixed(2) + ' MB',
+      mimeType: req.file.mimetype,
+      format: metadata.format,
+      width: metadata.width,
+      height: metadata.height,
+      aspectRatio: `${aspectRatio} (${metadata.width}:${metadata.height})`,
+      space: metadata.space || 'srgb',
+      channels: metadata.channels || 3,
+      depth: metadata.depth || '8-bit',
+      density: metadata.density || 72,
+      hasAlpha: metadata.hasAlpha || false,
+      isProgressive: metadata.isProgressive || false,
+      exif: metadata.exif ? 'EXIF Data Present' : 'None'
+    });
+
+  } catch (error) {
+    console.error('Get Metadata Error:', error);
+    res.status(500).json({ success: false, message: 'Failed to extract metadata: ' + error.message });
+  }
+};
+
+// 8. Apply Watermark Overlay (Text or Image Watermark)
+exports.applyWatermark = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No image file uploaded' });
+    }
+
+    const text = req.body.text || '© VisionAI Studio';
+    const color = req.body.color || '#ffffff';
+    const opacity = parseFloat(req.body.opacity) || 0.6;
+    const fontSize = parseInt(req.body.fontSize) || 36;
+    const position = req.body.position || 'bottom-right';
+
+    const inputBuffer = await getBufferFromFile(req.file);
+    const metadata = await sharp(inputBuffer).metadata();
+
+    // Create SVG overlay buffer for text watermark
+    const svgText = `
+      <svg width="${metadata.width}" height="${metadata.height}">
+        <style>
+          .wm-text {
+            fill: ${color};
+            font-size: ${fontSize}px;
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+            opacity: ${opacity};
+          }
+        </style>
+        <text x="50%" y="90%" text-anchor="middle" class="wm-text">${text}</text>
+      </svg>
+    `;
+
+    const svgBuffer = Buffer.from(svgText);
+    const outputBuffer = await sharp(inputBuffer)
+      .composite([{ input: svgBuffer, top: 0, left: 0 }])
+      .toBuffer();
+
+    const outputFilename = `watermarked-${Date.now()}.png`;
+    const outputPath = path.join(__dirname, '../uploads', outputFilename);
+    fs.writeFileSync(outputPath, outputBuffer);
+
+    const relativeUrl = `/uploads/${outputFilename}`;
+
+    res.json({
+      success: true,
+      message: 'Watermark applied successfully',
+      url: relativeUrl,
+      filename: outputFilename,
+      width: metadata.width,
+      height: metadata.height,
+      base64: `data:image/png;base64,${outputBuffer.toString('base64')}`
+    });
+  } catch (error) {
+    console.error('Watermark Error:', error);
+    res.status(500).json({ success: false, message: 'Watermark failed: ' + error.message });
   }
 };

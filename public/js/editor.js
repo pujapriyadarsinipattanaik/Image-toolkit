@@ -17,7 +17,17 @@ class CanvasEditor {
     this.brushSize = 30;
     this.currentFilter = 'normal';
     this.loadedImage = null;
+    this.originalImageData = null;
     this.loadedFilename = 'Edited Artwork';
+
+    // Zoom & Pan state
+    this.zoomLevel = 1.0;
+    this.panX = 0;
+    this.panY = 0;
+
+    // Before/After Split Comparison state
+    this.isSplitMode = false;
+    this.splitPosition = 0.5; // 0 to 1
 
     this.initElements();
     this.bindEvents();
@@ -37,6 +47,14 @@ class CanvasEditor {
     this.saveToHistoryBtn = document.getElementById('saveToHistoryBtn');
     this.downloadDropdownBtn = document.getElementById('downloadDropdownBtn');
     this.exportMenu = document.getElementById('exportMenu');
+
+    // Toolbar Zoom & Split controls
+    this.zoomInBtn = document.getElementById('btnZoomIn');
+    this.zoomOutBtn = document.getElementById('btnZoomOut');
+    this.zoomResetBtn = document.getElementById('btnZoomReset');
+    this.zoomValDisplay = document.getElementById('zoomValDisplay');
+    this.toggleSplitBtn = document.getElementById('btnToggleSplit');
+    this.metadataBtn = document.getElementById('btnMetadata');
 
     // Sidebar Panels & Controls
     this.toolTabs = document.querySelectorAll('.editor-tool-tab');
@@ -67,25 +85,42 @@ class CanvasEditor {
     this.resizeWidth = document.getElementById('resizeWidth');
     this.resizeHeight = document.getElementById('resizeHeight');
     this.applyCropBtn = document.getElementById('applyCropBtn');
+
+    // Text & Sticker Controls
+    this.wmTextInput = document.getElementById('wmTextInput');
+    this.wmTextColor = document.getElementById('wmTextColor');
+    this.wmFontSize = document.getElementById('wmFontSize');
+    this.applyWatermarkBtn = document.getElementById('applyWatermarkBtn');
+
+    this.addTextBtn = document.getElementById('addTextBtn');
+    this.stickerChips = document.querySelectorAll('.sticker-chip');
   }
 
   bindEvents() {
     // Upload File Trigger
-    this.triggerUploadBtn.addEventListener('click', () => this.fileInput.click());
-    this.fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
+    if (this.triggerUploadBtn) {
+      this.triggerUploadBtn.addEventListener('click', () => this.fileInput.click());
+    }
+    if (this.fileInput) {
+      this.fileInput.addEventListener('change', (e) => this.handleFileUpload(e));
+    }
 
     // Undo / Redo
-    this.undoBtn.addEventListener('click', () => this.undo());
-    this.redoBtn.addEventListener('click', () => this.redo());
+    if (this.undoBtn) this.undoBtn.addEventListener('click', () => this.undo());
+    if (this.redoBtn) this.redoBtn.addEventListener('click', () => this.redo());
 
     // Export & Save
-    this.saveToHistoryBtn.addEventListener('click', () => this.saveToCloud());
-    this.downloadDropdownBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.exportMenu.classList.toggle('hidden');
-    });
+    if (this.saveToHistoryBtn) this.saveToHistoryBtn.addEventListener('click', () => this.saveToCloud());
+    if (this.downloadDropdownBtn) {
+      this.downloadDropdownBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.exportMenu.classList.toggle('hidden');
+      });
+    }
 
-    document.addEventListener('click', () => this.exportMenu.classList.add('hidden'));
+    document.addEventListener('click', () => {
+      if (this.exportMenu) this.exportMenu.classList.add('hidden');
+    });
 
     document.querySelectorAll('.export-option').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -93,6 +128,25 @@ class CanvasEditor {
         this.downloadImage(format);
       });
     });
+
+    // Zoom & Split Controls
+    if (this.zoomInBtn) {
+      this.zoomInBtn.addEventListener('click', () => this.changeZoom(0.15));
+    }
+    if (this.zoomOutBtn) {
+      this.zoomOutBtn.addEventListener('click', () => this.changeZoom(-0.15));
+    }
+    if (this.zoomResetBtn) {
+      this.zoomResetBtn.addEventListener('click', () => this.resetZoom());
+    }
+
+    if (this.toggleSplitBtn) {
+      this.toggleSplitBtn.addEventListener('click', () => this.toggleSplitMode());
+    }
+
+    if (this.metadataBtn) {
+      this.metadataBtn.addEventListener('click', () => this.inspectMetadata());
+    }
 
     // Tool Sidebar Tabs
     this.toolTabs.forEach(tab => {
@@ -102,32 +156,38 @@ class CanvasEditor {
         e.currentTarget.classList.add('active');
 
         this.toolPanels.forEach(p => p.classList.remove('active'));
-        document.getElementById(targetPanel).classList.add('active');
+        const panel = document.getElementById(targetPanel);
+        if (panel) panel.classList.add('active');
       });
     });
 
     // Adjustment Sliders Event Listeners
     const updateAdjustments = () => this.applyCurrentFiltersAndAdjustments();
     [this.brightnessRange, this.contrastRange, this.saturationRange, this.sharpnessRange, this.blurRange].forEach(slider => {
-      slider.addEventListener('input', (e) => {
-        const valId = `${e.target.id.replace('Range', 'Val')}`;
-        const label = document.getElementById(valId);
-        if (label) label.textContent = e.target.value;
-        updateAdjustments();
-      });
+      if (slider) {
+        slider.addEventListener('input', (e) => {
+          const valId = `${e.target.id.replace('Range', 'Val')}`;
+          const label = document.getElementById(valId);
+          if (label) label.textContent = e.target.value;
+          updateAdjustments();
+        });
+      }
     });
 
-    this.resetAdjustmentsBtn.addEventListener('click', () => {
-      this.brightnessRange.value = 0;
-      this.contrastRange.value = 0;
-      this.saturationRange.value = 0;
-      this.sharpnessRange.value = 0;
-      this.blurRange.value = 0;
-      ['brightnessVal', 'contrastVal', 'saturationVal', 'sharpnessVal', 'blurVal'].forEach(id => {
-        document.getElementById(id).textContent = '0';
+    if (this.resetAdjustmentsBtn) {
+      this.resetAdjustmentsBtn.addEventListener('click', () => {
+        this.brightnessRange.value = 0;
+        this.contrastRange.value = 0;
+        this.saturationRange.value = 0;
+        this.sharpnessRange.value = 0;
+        this.blurRange.value = 0;
+        ['brightnessVal', 'contrastVal', 'saturationVal', 'sharpnessVal', 'blurVal'].forEach(id => {
+          const label = document.getElementById(id);
+          if (label) label.textContent = '0';
+        });
+        updateAdjustments();
       });
-      updateAdjustments();
-    });
+    }
 
     // Filter Cards
     this.filterCards.forEach(card => {
@@ -140,27 +200,50 @@ class CanvasEditor {
     });
 
     // Background Removal Action
-    this.bgToleranceRange.addEventListener('input', (e) => {
-      document.getElementById('bgToleranceVal').textContent = e.target.value;
-    });
-    this.processBgRemovalBtn.addEventListener('click', () => this.removeBackground());
+    if (this.bgToleranceRange) {
+      this.bgToleranceRange.addEventListener('input', (e) => {
+        const val = document.getElementById('bgToleranceVal');
+        if (val) val.textContent = e.target.value;
+      });
+    }
+    if (this.processBgRemovalBtn) {
+      this.processBgRemovalBtn.addEventListener('click', () => this.removeBackground());
+    }
 
-    // Magic Eraser Mask Drawing on Mask Canvas
-    this.brushSizeRange.addEventListener('input', (e) => {
-      this.brushSize = parseInt(e.target.value);
-      document.getElementById('brushSizeVal').textContent = `${this.brushSize}px`;
-    });
+    // Eraser
+    if (this.brushSizeRange) {
+      this.brushSizeRange.addEventListener('input', (e) => {
+        this.brushSize = parseInt(e.target.value);
+        const val = document.getElementById('brushSizeVal');
+        if (val) val.textContent = `${this.brushSize}px`;
+      });
+    }
 
-    this.maskCanvas.addEventListener('mousedown', (e) => this.startMaskDraw(e));
-    this.maskCanvas.addEventListener('mousemove', (e) => this.drawMask(e));
-    this.maskCanvas.addEventListener('mouseup', () => this.stopMaskDraw());
-    this.maskCanvas.addEventListener('mouseleave', () => this.stopMaskDraw());
+    if (this.maskCanvas) {
+      this.maskCanvas.addEventListener('mousedown', (e) => this.startMaskDraw(e));
+      this.maskCanvas.addEventListener('mousemove', (e) => this.drawMask(e));
+      this.maskCanvas.addEventListener('mouseup', () => this.stopMaskDraw());
+      this.maskCanvas.addEventListener('mouseleave', () => this.stopMaskDraw());
+    }
 
-    this.clearMaskBtn.addEventListener('click', () => this.clearMask());
-    this.runObjectRemovalBtn.addEventListener('click', () => this.eraseMaskedArea());
+    if (this.clearMaskBtn) this.clearMaskBtn.addEventListener('click', () => this.clearMask());
+    if (this.runObjectRemovalBtn) this.runObjectRemovalBtn.addEventListener('click', () => this.eraseMaskedArea());
 
     // Crop / Resize
-    this.applyCropBtn.addEventListener('click', () => this.applyResize());
+    if (this.applyCropBtn) this.applyCropBtn.addEventListener('click', () => this.applyResize());
+
+    // Watermark & Text Overlay
+    if (this.applyWatermarkBtn) {
+      this.applyWatermarkBtn.addEventListener('click', () => this.addWatermarkText());
+    }
+
+    // Stickers
+    this.stickerChips.forEach(chip => {
+      chip.addEventListener('click', (e) => {
+        const emoji = e.currentTarget.getAttribute('data-sticker');
+        this.addStickerEmoji(emoji);
+      });
+    });
   }
 
   // Load Image File
@@ -188,20 +271,141 @@ class CanvasEditor {
       this.maskCanvas.height = img.height;
 
       this.ctx.drawImage(img, 0, 0);
+      this.originalImageData = this.ctx.getImageData(0, 0, img.width, img.height);
+
       this.clearMask();
 
-      this.dimensionsBadge.textContent = `${img.width} x ${img.height} px`;
-      this.resizeWidth.value = img.width;
-      this.resizeHeight.value = img.height;
+      if (this.dimensionsBadge) {
+        this.dimensionsBadge.textContent = `${img.width} x ${img.height} px`;
+      }
+      if (this.resizeWidth) this.resizeWidth.value = img.width;
+      if (this.resizeHeight) this.resizeHeight.value = img.height;
 
       this.emptyState.classList.add('hidden');
       this.canvasWrap.classList.remove('hidden');
 
+      this.resetZoom();
       this.undoStack = [];
       this.redoStack = [];
       this.saveState();
     };
     img.src = url;
+  }
+
+  // Zoom & Pan
+  changeZoom(delta) {
+    this.zoomLevel = Math.max(0.2, Math.min(4.0, this.zoomLevel + delta));
+    this.applyCanvasTransform();
+  }
+
+  resetZoom() {
+    this.zoomLevel = 1.0;
+    this.panX = 0;
+    this.panY = 0;
+    this.applyCanvasTransform();
+  }
+
+  applyCanvasTransform() {
+    if (this.canvasWrap) {
+      this.canvasWrap.style.transform = `scale(${this.zoomLevel}) translate(${this.panX}px, ${this.panY}px)`;
+    }
+    if (this.zoomValDisplay) {
+      this.zoomValDisplay.textContent = `${Math.round(this.zoomLevel * 100)}%`;
+    }
+  }
+
+  // Before/After Split Comparison View
+  toggleSplitMode() {
+    if (!this.loadedImage || !this.originalImageData) return;
+    this.isSplitMode = !this.isSplitMode;
+
+    if (this.isSplitMode) {
+      this.toggleSplitBtn.classList.add('active');
+      this.renderSplitComparison();
+      window.showToast('Before-After Split View active', 'info');
+    } else {
+      this.toggleSplitBtn.classList.remove('active');
+      this.applyCurrentFiltersAndAdjustments();
+      window.showToast('Exited Split View', 'info');
+    }
+  }
+
+  renderSplitComparison() {
+    if (!this.originalImageData) return;
+
+    const width = this.mainCanvas.width;
+    const height = this.mainCanvas.height;
+    const splitX = Math.floor(width * this.splitPosition);
+
+    // Left side: original image
+    this.ctx.putImageData(this.originalImageData, 0, 0);
+
+    // Draw vertical divider line
+    this.ctx.strokeStyle = '#00f2fe';
+    this.ctx.lineWidth = 4;
+    this.ctx.beginPath();
+    this.ctx.moveTo(splitX, 0);
+    this.ctx.lineTo(splitX, height);
+    this.ctx.stroke();
+  }
+
+  // Inspect EXIF & Metadata
+  async inspectMetadata() {
+    if (!this.loadedImage) {
+      window.showToast('Please load an image first', 'info');
+      return;
+    }
+
+    const dataUrl = this.mainCanvas.toDataURL('image/png');
+    window.showToast('Inspecting image metadata...', 'info');
+
+    try {
+      const res = await ApiService.request('/utility/metadata', {
+        method: 'POST',
+        body: JSON.stringify({ image: dataUrl }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (res && res.success) {
+        alert(`EXIF & Image Properties:\n\nFormat: ${res.format.toUpperCase()}\nResolution: ${res.width} x ${res.height} px\nAspect Ratio: ${res.aspectRatio}\nColor Space: ${res.space}\nChannels: ${res.channels}`);
+      }
+    } catch (e) {
+      alert(`Image Details:\n\nResolution: ${this.mainCanvas.width} x ${this.mainCanvas.height} px\nAspect Ratio: ${(this.mainCanvas.width / this.mainCanvas.height).toFixed(2)}`);
+    }
+  }
+
+  // Add Watermark & Text Overlay
+  addWatermarkText() {
+    if (!this.loadedImage) return;
+
+    this.saveState();
+    const text = this.wmTextInput ? this.wmTextInput.value.trim() : '© VisionAI Studio';
+    const color = this.wmTextColor ? this.wmTextColor.value : '#ffffff';
+    const fontSize = this.wmFontSize ? parseInt(this.wmFontSize.value) : 36;
+
+    this.ctx.save();
+    this.ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+    this.ctx.fillStyle = color;
+    this.ctx.globalAlpha = 0.7;
+    this.ctx.textAlign = 'center';
+    this.ctx.fillText(text, this.mainCanvas.width / 2, this.mainCanvas.height - 40);
+    this.ctx.restore();
+
+    window.showToast('Watermark added to canvas!', 'success');
+  }
+
+  addStickerEmoji(emoji) {
+    if (!this.loadedImage || !emoji) return;
+
+    this.saveState();
+    this.ctx.save();
+    this.ctx.font = '60px Arial';
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+    this.ctx.fillText(emoji, this.mainCanvas.width / 2, this.mainCanvas.height / 2);
+    this.ctx.restore();
+
+    window.showToast(`Sticker ${emoji} added!`, 'success');
   }
 
   // Save Canvas State for Undo
@@ -235,27 +439,24 @@ class CanvasEditor {
   }
 
   updateUndoRedoBtns() {
-    this.undoBtn.disabled = this.undoStack.length <= 1;
-    this.redoBtn.disabled = this.redoStack.length === 0;
+    if (this.undoBtn) this.undoBtn.disabled = this.undoStack.length <= 1;
+    if (this.redoBtn) this.redoBtn.disabled = this.redoStack.length === 0;
   }
 
   // Apply Adjustments & Filters to base image
   applyCurrentFiltersAndAdjustments() {
     if (!this.loadedImage) return;
 
-    // Reset canvas to original base loaded image
     this.ctx.drawImage(this.loadedImage, 0, 0, this.mainCanvas.width, this.mainCanvas.height);
 
-    // Apply Filter Preset
     FilterEngine.applyPresetFilter(this.ctx, this.mainCanvas.width, this.mainCanvas.height, this.currentFilter);
 
-    // Apply Adjustments
     FilterEngine.applyAdjustments(this.ctx, this.mainCanvas.width, this.mainCanvas.height, {
-      brightness: parseInt(this.brightnessRange.value),
-      contrast: parseInt(this.contrastRange.value),
-      saturation: parseInt(this.saturationRange.value),
-      sharpness: parseInt(this.sharpnessRange.value),
-      blur: parseInt(this.blurRange.value)
+      brightness: parseInt(this.brightnessRange ? this.brightnessRange.value : 0),
+      contrast: parseInt(this.contrastRange ? this.contrastRange.value : 0),
+      saturation: parseInt(this.saturationRange ? this.saturationRange.value : 0),
+      sharpness: parseInt(this.sharpnessRange ? this.sharpnessRange.value : 0),
+      blur: parseInt(this.blurRange ? this.blurRange.value : 0)
     });
   }
 
@@ -269,10 +470,9 @@ class CanvasEditor {
     const imageData = this.ctx.getImageData(0, 0, width, height);
     const data = imageData.data;
 
-    const tolerance = parseInt(this.bgToleranceRange.value);
-    const keyMode = this.bgKeyMode.value;
+    const tolerance = parseInt(this.bgToleranceRange ? this.bgToleranceRange.value : 30);
+    const keyMode = this.bgKeyMode ? this.bgKeyMode.value : 'auto';
 
-    // Sample border pixels to detect background color if auto
     let sampleR = 255, sampleG = 255, sampleB = 255;
     if (keyMode === 'auto') {
       sampleR = (data[0] + data[(width - 1) * 4] + data[(height - 1) * width * 4]) / 3;
@@ -298,7 +498,6 @@ class CanvasEditor {
       );
 
       if (diff < tolerance * 2.5) {
-        // Smooth alpha falloff
         const alpha = Math.max(0, (diff / (tolerance * 2.5)) * 255);
         data[i + 3] = alpha;
       }
@@ -338,7 +537,7 @@ class CanvasEditor {
     this.maskCtx.clearRect(0, 0, this.maskCanvas.width, this.maskCanvas.height);
   }
 
-  // Magic Eraser Object Removal (Patch-based content-aware inpaint algorithm)
+  // Magic Eraser Object Removal
   eraseMaskedArea() {
     if (!this.loadedImage) return;
 
@@ -352,17 +551,14 @@ class CanvasEditor {
     const imgPixels = imgData.data;
     const maskPixels = maskData.data;
 
-    // Iterate over masked pixels and replace with neighbor patch interpolation
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const idx = (y * width + x) * 4;
         
-        // If masked (red alpha > 0)
         if (maskPixels[idx + 3] > 0) {
           let sumR = 0, sumG = 0, sumB = 0, count = 0;
           const radius = Math.max(5, Math.floor(this.brushSize / 2));
 
-          // Sample surrounding non-masked pixels
           for (let dy = -radius; dy <= radius; dy += 2) {
             for (let dx = -radius; dx <= radius; dx += 2) {
               const nx = x + dx;
@@ -418,7 +614,9 @@ class CanvasEditor {
     this.maskCanvas.height = newHeight;
 
     this.ctx.drawImage(tempCanvas, 0, 0);
-    this.dimensionsBadge.textContent = `${newWidth} x ${newHeight} px`;
+    if (this.dimensionsBadge) {
+      this.dimensionsBadge.textContent = `${newWidth} x ${newHeight} px`;
+    }
     this.clearMask();
 
     window.showToast(`Resized canvas to ${newWidth}x${newHeight}px`, 'success');
@@ -456,7 +654,7 @@ class CanvasEditor {
       const res = await ApiService.saveEditedImage({
         base64Data: dataUrl,
         originalName: this.loadedFilename,
-        toolUsed: 'Canvas Studio Studio',
+        toolUsed: 'Canvas Studio',
         parameters: { filter: this.currentFilter }
       });
 

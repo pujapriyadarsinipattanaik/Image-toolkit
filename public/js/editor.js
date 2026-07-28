@@ -13,12 +13,20 @@ class CanvasEditor {
     this.redoStack = [];
     this.maxHistory = 20;
 
-    this.isDrawingMask = false;
+    this.isMouseDown = false;
     this.brushSize = 30;
     this.currentFilter = 'normal';
+    this.currentToolPanel = 'panel-crop';
     this.loadedImage = null;
     this.originalImageData = null;
     this.loadedFilename = 'Edited Artwork';
+
+    // Interactive mouse state
+    this.activeSticker = '⭐';
+    this.lastStickerPos = null;
+    this.watermarkPos = null;
+    this.cropDragStart = null;
+    this.currentCropBox = null; // { x, y, width, height }
 
     // Zoom & Pan state
     this.zoomLevel = 1.0;
@@ -27,7 +35,7 @@ class CanvasEditor {
 
     // Before/After Split Comparison state
     this.isSplitMode = false;
-    this.splitPosition = 0.5; // 0 to 1
+    this.splitPosition = 0.5;
 
     this.initElements();
     this.bindEvents();
@@ -130,25 +138,13 @@ class CanvasEditor {
     });
 
     // Zoom & Split Controls
-    if (this.zoomInBtn) {
-      this.zoomInBtn.addEventListener('click', () => this.changeZoom(0.15));
-    }
-    if (this.zoomOutBtn) {
-      this.zoomOutBtn.addEventListener('click', () => this.changeZoom(-0.15));
-    }
-    if (this.zoomResetBtn) {
-      this.zoomResetBtn.addEventListener('click', () => this.resetZoom());
-    }
+    if (this.zoomInBtn) this.zoomInBtn.addEventListener('click', () => this.changeZoom(0.15));
+    if (this.zoomOutBtn) this.zoomOutBtn.addEventListener('click', () => this.changeZoom(-0.15));
+    if (this.zoomResetBtn) this.zoomResetBtn.addEventListener('click', () => this.resetZoom());
+    if (this.toggleSplitBtn) this.toggleSplitBtn.addEventListener('click', () => this.toggleSplitMode());
+    if (this.metadataBtn) this.metadataBtn.addEventListener('click', () => this.inspectMetadata());
 
-    if (this.toggleSplitBtn) {
-      this.toggleSplitBtn.addEventListener('click', () => this.toggleSplitMode());
-    }
-
-    if (this.metadataBtn) {
-      this.metadataBtn.addEventListener('click', () => this.inspectMetadata());
-    }
-
-    // Tool Sidebar Tabs
+    // Tool Sidebar Tabs Switching
     this.toolTabs.forEach(tab => {
       tab.addEventListener('click', (e) => {
         const targetPanel = e.currentTarget.getAttribute('data-panel');
@@ -159,15 +155,8 @@ class CanvasEditor {
         const panel = document.getElementById(targetPanel);
         if (panel) panel.classList.add('active');
 
-        // Only enable mask drawing pointer events when Eraser tool is active
-        if (targetPanel === 'panel-eraser') {
-          this.maskCanvas.style.pointerEvents = 'auto';
-          this.maskCanvas.style.cursor = 'crosshair';
-          window.showToast('Magic Eraser active. Brush over unwanted elements.', 'info');
-        } else {
-          this.maskCanvas.style.pointerEvents = 'none';
-          this.maskCanvas.style.cursor = 'default';
-        }
+        this.currentToolPanel = targetPanel;
+        this.updateCanvasMouseBehavior();
       });
     });
 
@@ -183,20 +172,29 @@ class CanvasEditor {
         const imgW = this.mainCanvas.width;
         const imgH = this.mainCanvas.height;
 
+        let targetW = imgW;
+        let targetH = imgH;
+
         if (ratio === '1:1') {
           const side = Math.min(imgW, imgH);
-          if (this.resizeWidth) this.resizeWidth.value = side;
-          if (this.resizeHeight) this.resizeHeight.value = side;
+          targetW = side;
+          targetH = side;
         } else if (ratio === '16:9') {
-          if (this.resizeWidth) this.resizeWidth.value = imgW;
-          if (this.resizeHeight) this.resizeHeight.value = Math.round(imgW * (9 / 16));
+          targetW = imgW;
+          targetH = Math.round(imgW * (9 / 16));
         } else if (ratio === '4:3') {
-          if (this.resizeWidth) this.resizeWidth.value = imgW;
-          if (this.resizeHeight) this.resizeHeight.value = Math.round(imgW * (3 / 4));
-        } else {
-          if (this.resizeWidth) this.resizeWidth.value = imgW;
-          if (this.resizeHeight) this.resizeHeight.value = imgH;
+          targetW = imgW;
+          targetH = Math.round(imgW * (3 / 4));
         }
+
+        if (this.resizeWidth) this.resizeWidth.value = targetW;
+        if (this.resizeHeight) this.resizeHeight.value = targetH;
+
+        // Auto calculate centered crop box overlay
+        const cropX = Math.max(0, Math.floor((imgW - targetW) / 2));
+        const cropY = Math.max(0, Math.floor((imgH - targetH) / 2));
+        this.currentCropBox = { x: cropX, y: cropY, width: targetW, height: targetH };
+        this.drawCropBoxOverlay();
       });
     });
 
@@ -249,7 +247,7 @@ class CanvasEditor {
       this.processBgRemovalBtn.addEventListener('click', () => this.removeBackground());
     }
 
-    // Eraser
+    // Eraser brush slider
     if (this.brushSizeRange) {
       this.brushSizeRange.addEventListener('input', (e) => {
         this.brushSize = parseInt(e.target.value);
@@ -258,11 +256,12 @@ class CanvasEditor {
       });
     }
 
+    // UNIFIED CANVAS MOUSE LISTENERS (Crop, Eraser, Stickers, Watermark)
     if (this.maskCanvas) {
-      this.maskCanvas.addEventListener('mousedown', (e) => this.startMaskDraw(e));
-      this.maskCanvas.addEventListener('mousemove', (e) => this.drawMask(e));
-      this.maskCanvas.addEventListener('mouseup', () => this.stopMaskDraw());
-      this.maskCanvas.addEventListener('mouseleave', () => this.stopMaskDraw());
+      this.maskCanvas.addEventListener('mousedown', (e) => this.handleCanvasMouseDown(e));
+      this.maskCanvas.addEventListener('mousemove', (e) => this.handleCanvasMouseMove(e));
+      this.maskCanvas.addEventListener('mouseup', (e) => this.handleCanvasMouseUp(e));
+      this.maskCanvas.addEventListener('mouseleave', (e) => this.handleCanvasMouseUp(e));
     }
 
     if (this.clearMaskBtn) this.clearMaskBtn.addEventListener('click', () => this.clearMask());
@@ -279,10 +278,181 @@ class CanvasEditor {
     // Stickers
     this.stickerChips.forEach(chip => {
       chip.addEventListener('click', (e) => {
-        const emoji = e.currentTarget.getAttribute('data-sticker');
-        this.addStickerEmoji(emoji);
+        this.stickerChips.forEach(c => c.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        this.activeSticker = e.currentTarget.getAttribute('data-sticker');
+        window.showToast(`Sticker ${this.activeSticker} selected. Click or drag on image to place it.`, 'info');
       });
     });
+  }
+
+  // Get mouse coordinates relative to original canvas resolution
+  getCanvasCoords(e) {
+    const rect = this.maskCanvas.getBoundingClientRect();
+    const scaleX = this.maskCanvas.width / rect.width;
+    const scaleY = this.maskCanvas.height / rect.height;
+
+    return {
+      x: Math.round((e.clientX - rect.left) * scaleX),
+      y: Math.round((e.clientY - rect.top) * scaleY)
+    };
+  }
+
+  // Configure mouse pointer-events and cursor based on active sidebar tool tab
+  updateCanvasMouseBehavior() {
+    if (!this.maskCanvas) return;
+
+    if (this.currentToolPanel === 'panel-eraser') {
+      this.maskCanvas.style.pointerEvents = 'auto';
+      this.maskCanvas.style.cursor = 'crosshair';
+      window.showToast('Magic Eraser active. Brush over unwanted elements.', 'info');
+    } else if (this.currentToolPanel === 'panel-crop') {
+      this.maskCanvas.style.pointerEvents = 'auto';
+      this.maskCanvas.style.cursor = 'crosshair';
+      window.showToast('Crop Tool active. Drag mouse on image to select crop region.', 'info');
+    } else if (this.currentToolPanel === 'panel-stickers') {
+      this.maskCanvas.style.pointerEvents = 'auto';
+      this.maskCanvas.style.cursor = 'pointer';
+      window.showToast(`Sticker ${this.activeSticker} active. Click or drag on image to place.`, 'info');
+    } else if (this.currentToolPanel === 'panel-watermark') {
+      this.maskCanvas.style.pointerEvents = 'auto';
+      this.maskCanvas.style.cursor = 'pointer';
+      window.showToast('Watermark Tool active. Click or drag on image to position text.', 'info');
+    } else {
+      this.maskCanvas.style.pointerEvents = 'none';
+      this.maskCanvas.style.cursor = 'default';
+    }
+  }
+
+  // Unified MouseDown Event
+  handleCanvasMouseDown(e) {
+    if (!this.loadedImage) return;
+    this.isMouseDown = true;
+    const pos = this.getCanvasCoords(e);
+
+    if (this.currentToolPanel === 'panel-eraser') {
+      this.startMaskDraw(pos);
+    } else if (this.currentToolPanel === 'panel-crop') {
+      this.cropDragStart = pos;
+      this.currentCropBox = null;
+      this.clearMask();
+    } else if (this.currentToolPanel === 'panel-stickers') {
+      this.stampStickerAt(pos.x, pos.y);
+    } else if (this.currentToolPanel === 'panel-watermark') {
+      this.stampWatermarkAt(pos.x, pos.y);
+    }
+  }
+
+  // Unified MouseMove Event
+  handleCanvasMouseMove(e) {
+    if (!this.loadedImage || !this.isMouseDown) return;
+    const pos = this.getCanvasCoords(e);
+
+    if (this.currentToolPanel === 'panel-eraser') {
+      this.drawMask(pos);
+    } else if (this.currentToolPanel === 'panel-crop' && this.cropDragStart) {
+      const cropX = Math.min(this.cropDragStart.x, pos.x);
+      const cropY = Math.min(this.cropDragStart.y, pos.y);
+      const cropW = Math.abs(pos.x - this.cropDragStart.x);
+      const cropH = Math.abs(pos.y - this.cropDragStart.y);
+
+      if (cropW > 5 && cropH > 5) {
+        this.currentCropBox = { x: cropX, y: cropY, width: cropW, height: cropH };
+        if (this.resizeWidth) this.resizeWidth.value = cropW;
+        if (this.resizeHeight) this.resizeHeight.value = cropH;
+        this.drawCropBoxOverlay();
+      }
+    } else if (this.currentToolPanel === 'panel-stickers') {
+      this.stampStickerAt(pos.x, pos.y, false);
+    } else if (this.currentToolPanel === 'panel-watermark') {
+      this.stampWatermarkAt(pos.x, pos.y, false);
+    }
+  }
+
+  // Unified MouseUp Event
+  handleCanvasMouseUp(e) {
+    if (this.isMouseDown && this.currentToolPanel === 'panel-crop' && this.currentCropBox) {
+      window.showToast(`Selected crop area: ${this.currentCropBox.width}x${this.currentCropBox.height}px. Click Apply Crop / Resize.`, 'info');
+    }
+    this.isMouseDown = false;
+    this.cropDragStart = null;
+  }
+
+  // Draw Visual Crop Box Selection Overlay on Mask Canvas
+  drawCropBoxOverlay() {
+    if (!this.currentCropBox) return;
+
+    const { x, y, width, height } = this.currentCropBox;
+    const canvasW = this.maskCanvas.width;
+    const canvasH = this.maskCanvas.height;
+
+    this.maskCtx.clearRect(0, 0, canvasW, canvasH);
+
+    // Dimmed translucent overlay outside crop box
+    this.maskCtx.fillStyle = 'rgba(0, 0, 0, 0.55)';
+    this.maskCtx.fillRect(0, 0, canvasW, y); // Top
+    this.maskCtx.fillRect(0, y + height, canvasW, canvasH - (y + height)); // Bottom
+    this.maskCtx.fillRect(0, y, x, height); // Left
+    this.maskCtx.fillRect(x + width, y, canvasW - (x + width), height); // Right
+
+    // Glowing cyan selection border
+    this.maskCtx.strokeStyle = '#00f2fe';
+    this.maskCtx.lineWidth = 3;
+    this.maskCtx.setLineDash([6, 4]);
+    this.maskCtx.strokeRect(x, y, width, height);
+    this.maskCtx.setLineDash([]);
+
+    // Corner handle squares
+    this.maskCtx.fillStyle = '#00f2fe';
+    const handleSize = Math.max(8, Math.min(20, Math.round(canvasW / 80)));
+    this.maskCtx.fillRect(x - handleSize/2, y - handleSize/2, handleSize, handleSize);
+    this.maskCtx.fillRect(x + width - handleSize/2, y - handleSize/2, handleSize, handleSize);
+    this.maskCtx.fillRect(x - handleSize/2, y + height - handleSize/2, handleSize, handleSize);
+    this.maskCtx.fillRect(x + width - handleSize/2, y + height - handleSize/2, handleSize, handleSize);
+  }
+
+  // Stamp Sticker at Mouse Coordinate (x, y)
+  stampStickerAt(x, y, isNewAction = true) {
+    if (!this.loadedImage || !this.activeSticker) return;
+
+    if (isNewAction) this.saveState();
+
+    this.ctx.drawImage(this.loadedImage, 0, 0, this.mainCanvas.width, this.mainCanvas.height);
+    this.applyCurrentFiltersAndAdjustments();
+
+    this.ctx.save();
+    this.ctx.font = `${Math.round(this.mainCanvas.width * 0.08)}px Arial`;
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+    this.ctx.fillText(this.activeSticker, x, y);
+    this.ctx.restore();
+
+    this.lastStickerPos = { x, y };
+  }
+
+  // Stamp Watermark Text at Mouse Coordinate (x, y)
+  stampWatermarkAt(x, y, isNewAction = true) {
+    if (!this.loadedImage) return;
+
+    if (isNewAction) this.saveState();
+
+    const text = this.wmTextInput ? this.wmTextInput.value.trim() : '© PixoraAI Studio';
+    const color = this.wmTextColor ? this.wmTextColor.value : '#ffffff';
+    const fontSize = this.wmFontSize ? parseInt(this.wmFontSize.value) : 36;
+
+    this.ctx.drawImage(this.loadedImage, 0, 0, this.mainCanvas.width, this.mainCanvas.height);
+    this.applyCurrentFiltersAndAdjustments();
+
+    this.ctx.save();
+    this.ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+    this.ctx.fillStyle = color;
+    this.ctx.globalAlpha = 0.75;
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+    this.ctx.fillText(text, x, y);
+    this.ctx.restore();
+
+    this.watermarkPos = { x, y };
   }
 
   // Load Image File
@@ -313,6 +483,7 @@ class CanvasEditor {
       this.originalImageData = this.ctx.getImageData(0, 0, img.width, img.height);
 
       this.clearMask();
+      this.currentCropBox = null;
 
       if (this.dimensionsBadge) {
         this.dimensionsBadge.textContent = `${img.width} x ${img.height} px`;
@@ -324,6 +495,7 @@ class CanvasEditor {
       this.canvasWrap.classList.remove('hidden');
 
       this.resetZoom();
+      this.updateCanvasMouseBehavior();
       this.undoStack = [];
       this.redoStack = [];
       this.saveState();
@@ -376,10 +548,8 @@ class CanvasEditor {
     const height = this.mainCanvas.height;
     const splitX = Math.floor(width * this.splitPosition);
 
-    // Left side: original image
     this.ctx.putImageData(this.originalImageData, 0, 0);
 
-    // Draw vertical divider line
     this.ctx.strokeStyle = '#00f2fe';
     this.ctx.lineWidth = 4;
     this.ctx.beginPath();
@@ -417,34 +587,9 @@ class CanvasEditor {
   addWatermarkText() {
     if (!this.loadedImage) return;
 
-    this.saveState();
     const text = this.wmTextInput ? this.wmTextInput.value.trim() : '© PixoraAI Studio';
-    const color = this.wmTextColor ? this.wmTextColor.value : '#ffffff';
-    const fontSize = this.wmFontSize ? parseInt(this.wmFontSize.value) : 36;
-
-    this.ctx.save();
-    this.ctx.font = `bold ${fontSize}px Arial, sans-serif`;
-    this.ctx.fillStyle = color;
-    this.ctx.globalAlpha = 0.7;
-    this.ctx.textAlign = 'center';
-    this.ctx.fillText(text, this.mainCanvas.width / 2, this.mainCanvas.height - 40);
-    this.ctx.restore();
-
-    window.showToast('Watermark added to canvas!', 'success');
-  }
-
-  addStickerEmoji(emoji) {
-    if (!this.loadedImage || !emoji) return;
-
-    this.saveState();
-    this.ctx.save();
-    this.ctx.font = '60px Arial';
-    this.ctx.textAlign = 'center';
-    this.ctx.textBaseline = 'middle';
-    this.ctx.fillText(emoji, this.mainCanvas.width / 2, this.mainCanvas.height / 2);
-    this.ctx.restore();
-
-    window.showToast(`Sticker ${emoji} added!`, 'success');
+    this.stampWatermarkAt(this.mainCanvas.width / 2, this.mainCanvas.height - 50);
+    window.showToast(`Watermark "${text}" added to canvas!`, 'success');
   }
 
   // Save Canvas State for Undo
@@ -547,29 +692,15 @@ class CanvasEditor {
   }
 
   // Magic Eraser Mask Drawing
-  startMaskDraw(e) {
-    this.isDrawingMask = true;
-    this.drawMask(e);
+  startMaskDraw(pos) {
+    this.drawMask(pos);
   }
 
-  drawMask(e) {
-    if (!this.isDrawingMask) return;
-
-    const rect = this.maskCanvas.getBoundingClientRect();
-    const scaleX = this.maskCanvas.width / rect.width;
-    const scaleY = this.maskCanvas.height / rect.height;
-
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
-
+  drawMask(pos) {
     this.maskCtx.fillStyle = 'rgba(255, 8, 68, 0.65)';
     this.maskCtx.beginPath();
-    this.maskCtx.arc(x, y, this.brushSize / 2, 0, Math.PI * 2);
+    this.maskCtx.arc(pos.x, pos.y, this.brushSize / 2, 0, Math.PI * 2);
     this.maskCtx.fill();
-  }
-
-  stopMaskDraw() {
-    this.isDrawingMask = false;
   }
 
   clearMask() {
@@ -649,13 +780,18 @@ class CanvasEditor {
     const currentW = this.mainCanvas.width;
     const currentH = this.mainCanvas.height;
 
-    // Calculate center crop region
-    let cropW = newWidth;
-    let cropH = newHeight;
+    // Calculate crop region (use user mouse crop selection if available, else center crop)
     let cropX = 0;
     let cropY = 0;
+    let cropW = newWidth;
+    let cropH = newHeight;
 
-    if (cropW <= currentW && cropH <= currentH) {
+    if (this.currentCropBox && this.currentCropBox.width > 5 && this.currentCropBox.height > 5) {
+      cropX = this.currentCropBox.x;
+      cropY = this.currentCropBox.y;
+      cropW = this.currentCropBox.width;
+      cropH = this.currentCropBox.height;
+    } else if (cropW <= currentW && cropH <= currentH) {
       cropX = Math.floor((currentW - cropW) / 2);
       cropY = Math.floor((currentH - cropH) / 2);
     } else {
@@ -709,6 +845,7 @@ class CanvasEditor {
       this.dimensionsBadge.textContent = `${newWidth} x ${newHeight} px`;
     }
     this.clearMask();
+    this.currentCropBox = null;
 
     window.showToast(`Cropped & resized canvas to ${newWidth}x${newHeight}px`, 'success');
   }

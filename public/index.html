@@ -190,8 +190,8 @@
           <!-- LEFT SIDE: DRAG AND DROP ZONE + OPERATIONS -->
           <div class="utility-controls-panel glass-card">
             <div class="panel-header">
-              <h2><i class="fa-solid fa-gears"></i> Image Utility Studio</h2>
-              <span class="subtext">Compress, Convert (JPG, PNG, WebP, HEIC), Resize, Rotate, Base64</span>
+              <h2><i class="fa-solid fa-gears"></i> Easy Image Utilities Studio</h2>
+              <span class="subtext">Compress, Convert, Resize, Rotate & Base64 Converter</span>
             </div>
 
             <!-- DRAG & DROP ZONE -->
@@ -207,7 +207,7 @@
                   <span class="badge">JPG</span>
                   <span class="badge">PNG</span>
                   <span class="badge">WEBP</span>
-                  <span class="badge">HEIC</span>
+                  <span class="badge">HEIC (iPhone)</span>
                 </div>
               </div>
             </div>
@@ -224,11 +224,11 @@
 
             <!-- OPERATION SELECTOR TABS -->
             <div class="util-op-tabs mt-3">
-              <button class="util-op-tab active" data-op="compress"><i class="fa-solid fa-compress"></i> Compress</button>
-              <button class="util-op-tab" data-op="convert"><i class="fa-solid fa-file-export"></i> Convert Format</button>
-              <button class="util-op-tab" data-op="resize"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> Resize</button>
-              <button class="util-op-tab" data-op="rotate"><i class="fa-solid fa-rotate"></i> Rotate & Flip</button>
-              <button class="util-op-tab" data-op="base64"><i class="fa-solid fa-code"></i> Base64</button>
+              <button class="util-op-tab active" data-op="compress"><i class="fa-solid fa-compress"></i> ⚡ Compress</button>
+              <button class="util-op-tab" data-op="convert"><i class="fa-solid fa-file-export"></i> 🔄 Convert</button>
+              <button class="util-op-tab" data-op="resize"><i class="fa-solid fa-up-right-and-down-left-from-center"></i> 📐 Resize</button>
+              <button class="util-op-tab" data-op="rotate"><i class="fa-solid fa-rotate"></i> ↩️ Rotate</button>
+              <button class="util-op-tab" data-op="base64"><i class="fa-solid fa-code"></i> 🔤 Base64</button>
             </div>
 
             <!-- OPERATION PANELS -->
@@ -236,6 +236,8 @@
               
               <!-- 1. COMPRESS PANEL -->
               <div id="op-panel-compress" class="util-op-panel active">
+                <p class="subtext mb-2"><i class="fa-solid fa-circle-info"></i> Reduce image file size up to 90% without losing visual quality (Great for WhatsApp, email & websites).</p>
+                
                 <div class="slider-control">
                   <div class="slider-header">
                     <span>Compression Quality</span>
@@ -244,20 +246,22 @@
                   <input type="range" id="compressQualityRange" min="10" max="100" value="60" class="slider-input">
                 </div>
 
-                <div class="form-group">
+                <div class="form-group mt-2">
                   <label class="form-label">Target Format</label>
                   <select id="compressFormatSelect" class="form-control">
                     <option value="jpeg">JPEG (Best Size Reduction)</option>
                     <option value="webp">WebP (Modern High Compression)</option>
-                    <option value="png">PNG (Lossless Compression)</option>
+                    <option value="png">PNG (Lossless Quality)</option>
                   </select>
                 </div>
 
-                <button id="runCompressBtn" class="btn btn-primary btn-block mt-3"><i class="fa-solid fa-compress"></i> Compress Image</button>
+                <button id="runCompressBtn" class="btn btn-primary btn-block mt-3"><i class="fa-solid fa-compress"></i> Compress Image Now</button>
               </div>
 
               <!-- 2. CONVERT PANEL -->
               <div id="op-panel-convert" class="util-op-panel">
+                <p class="subtext mb-2"><i class="fa-solid fa-circle-info"></i> Convert iPhone HEIC photos, PNGs, and JPGs to WebP or JPG in 1-click.</p>
+
                 <div class="form-group">
                   <label class="form-label">Select Target Format</label>
                   <div class="chip-group">
@@ -275,12 +279,24 @@
                   <input type="range" id="convertQualityRange" min="10" max="100" value="90" class="slider-input">
                 </div>
 
-                <button id="runConvertBtn" class="btn btn-primary btn-block mt-3"><i class="fa-solid fa-file-export"></i> Convert Image Format</button>
+                <button id="runConvertBtn" class="btn btn-primary btn-block mt-3"><i class="fa-solid fa-file-export"></i> Convert Format Now</button>
               </div>
 
               <!-- 3. RESIZE PANEL -->
               <div id="op-panel-resize" class="util-op-panel">
-                <div class="form-row">
+                <p class="subtext mb-2"><i class="fa-solid fa-circle-info"></i> Select a quick preset or type custom dimensions in pixels.</p>
+                
+                <div class="form-group">
+                  <label class="form-label">Quick Resolution Presets</label>
+                  <div class="chip-group">
+                    <button class="chip util-preset-btn" data-w="1920" data-h="1080">Full HD (1920x1080)</button>
+                    <button class="chip util-preset-btn" data-w="1280" data-h="720">HD (1280x720)</button>
+                    <button class="chip util-preset-btn" data-w="1080" data-h="1080">Instagram (1080x1080)</button>
+                    <button class="chip util-preset-btn" data-w="1080" data-h="1920">Story (1080x1920)</button>
+                  </div>
+                </div>
+
+                <div class="form-row mt-2">
                   <div class="form-group col">
                     <label class="form-label">Width (px)</label>
                     <input type="number" id="utilResizeWidth" class="form-control" placeholder="1024">
@@ -297,27 +313,29 @@
                   </label>
                 </div>
 
-                <button id="runResizeBtn" class="btn btn-primary btn-block mt-3"><i class="fa-solid fa-check"></i> Apply Resize</button>
+                <button id="runResizeBtn" class="btn btn-primary btn-block mt-3"><i class="fa-solid fa-check"></i> Apply Resize Now</button>
               </div>
 
               <!-- 4. ROTATE & FLIP PANEL -->
               <div id="op-panel-rotate" class="util-op-panel">
+                <p class="subtext mb-2"><i class="fa-solid fa-circle-info"></i> Turn photos or flip them horizontally/vertically.</p>
+
                 <div class="btn-group">
-                  <button id="btnRotateLeft" class="btn btn-secondary col"><i class="fa-solid fa-rotate-left"></i> -90°</button>
-                  <button id="btnRotateRight" class="btn btn-secondary col"><i class="fa-solid fa-rotate-right"></i> +90°</button>
-                  <button id="btnRotate180" class="btn btn-secondary col"><i class="fa-solid fa-arrows-rotate"></i> 180°</button>
+                  <button id="btnRotateLeft" class="btn btn-secondary col"><i class="fa-solid fa-rotate-left"></i> -90° Left</button>
+                  <button id="btnRotateRight" class="btn btn-secondary col"><i class="fa-solid fa-rotate-right"></i> +90° Right</button>
+                  <button id="btnRotate180" class="btn btn-secondary col"><i class="fa-solid fa-arrows-rotate"></i> 180° Flip</button>
                 </div>
                 <div class="btn-group mt-2">
-                  <button id="btnFlipH" class="btn btn-secondary col"><i class="fa-solid fa-arrows-left-right"></i> Flip Horizontally</button>
-                  <button id="btnFlipV" class="btn btn-secondary col"><i class="fa-solid fa-arrows-up-down"></i> Flip Vertically</button>
+                  <button id="btnFlipH" class="btn btn-secondary col"><i class="fa-solid fa-arrows-left-right"></i> Mirror Horizontal</button>
+                  <button id="btnFlipV" class="btn btn-secondary col"><i class="fa-solid fa-arrows-up-down"></i> Mirror Vertical</button>
                 </div>
 
-                <button id="runRotateFlipBtn" class="btn btn-primary btn-block mt-3"><i class="fa-solid fa-floppy-disk"></i> Apply Transformation</button>
+                <button id="runRotateFlipBtn" class="btn btn-primary btn-block mt-3"><i class="fa-solid fa-floppy-disk"></i> Apply Rotation</button>
               </div>
 
               <!-- 5. BASE64 CONVERTER PANEL -->
               <div id="op-panel-base64" class="util-op-panel">
-                <p class="subtext">Convert any uploaded image into a Base64 data URL string for embedding directly into HTML, CSS, or JSON.</p>
+                <p class="subtext mb-2"><i class="fa-solid fa-circle-info"></i> Convert image into a Base64 code string for embedding directly into HTML, CSS, or JSON.</p>
                 <button id="runBase64Btn" class="btn btn-primary btn-block mt-3"><i class="fa-solid fa-code"></i> Generate Base64 String</button>
               </div>
 
@@ -435,24 +453,36 @@
           <!-- LEFT CONTROL PANEL -->
           <div class="ai-controls-panel glass-card">
             <div class="panel-header">
-              <h2><i class="fa-solid fa-wand-magic-sparkles"></i> AI Generator Studio</h2>
-              <span class="subtext">Engine: Flux Neural Synth v2</span>
+              <h2><i class="fa-solid fa-wand-magic-sparkles"></i> Easy AI Image Generator</h2>
+              <span class="subtext">Type any idea or pick a 1-click prompt below to generate HD AI artwork</span>
             </div>
 
+            <!-- PROMPT IDEAS CHIPS -->
             <div class="form-group">
+              <label class="form-label">💡 1-Click Prompt Ideas (Click to Try)</label>
+              <div class="chip-group">
+                <button class="chip prompt-idea-chip" data-prompt="A golden hour portrait of a traveler on a tropical beach, sunset glow, cinematic lighting, 8k">🌅 Beach Sunset</button>
+                <button class="chip prompt-idea-chip" data-prompt="Futuristic cyberpunk city street at night with neon holographic billboards, detailed digital art">🚀 Cyberpunk City</button>
+                <button class="chip prompt-idea-chip" data-prompt="A cute fluffy 3D anime kitten wearing a tiny astronaut suit, soft studio lighting, Pixar style">🐱 Anime Kitten</button>
+                <button class="chip prompt-idea-chip" data-prompt="Enchanted magical fantasy forest with glowing luminescent mushrooms and waterfalls, watercolor digital painting">🎨 Fantasy Forest</button>
+                <button class="chip prompt-idea-chip" data-prompt="Sleek futuristic electric supercar driving through a neon highway at dusk, hyperrealistic 8k">🏎️ Electric Supercar</button>
+              </div>
+            </div>
+
+            <div class="form-group mt-2">
               <label for="aiPromptInput" class="form-label">
-                <span>Prompt Description</span>
-                <button id="enhancePromptBtn" class="btn-link"><i class="fa-solid fa-sparkles"></i> Enhance Prompt</button>
+                <span>Step 1: Prompt Description</span>
+                <button id="enhancePromptBtn" class="btn-link"><i class="fa-solid fa-sparkles"></i> ✨ Magic Enhancer</button>
               </label>
               <textarea id="aiPromptInput" class="form-control" rows="4" placeholder="Describe the image you want to generate... e.g. A futuristic cyberpunk city at night with neon holographic billboards, detailed 8k photography"></textarea>
             </div>
 
             <!-- STYLE PRESETS -->
             <div class="form-group">
-              <label class="form-label">Artistic Style Preset</label>
+              <label class="form-label">Step 2: Pick Artistic Style</label>
               <div class="style-chips-grid">
                 <div class="style-chip active" data-style="none">
-                  <i class="fa-solid fa-circle-nodes"></i> None
+                  <i class="fa-solid fa-circle-nodes"></i> Standard
                 </div>
                 <div class="style-chip" data-style="cyberpunk">
                   <i class="fa-solid fa-city"></i> Cyberpunk

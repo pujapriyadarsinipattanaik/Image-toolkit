@@ -134,6 +134,21 @@ class UtilityStudio {
       this.compressQualityVal.textContent = `${e.target.value}%`;
     });
 
+    // Resize Resolution Presets
+    document.querySelectorAll('.util-preset-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.util-preset-btn').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+
+        const w = e.currentTarget.getAttribute('data-w');
+        const h = e.currentTarget.getAttribute('data-h');
+
+        if (this.resizeWidthInput) this.resizeWidthInput.value = w;
+        if (this.resizeHeightInput) this.resizeHeightInput.value = h;
+        window.showToast(`Preset resolution ${w}x${h}px selected`, 'info');
+      });
+    });
+
     // Convert Chips & Sliders
     this.targetFormatChips.forEach(chip => {
       chip.addEventListener('click', (e) => {

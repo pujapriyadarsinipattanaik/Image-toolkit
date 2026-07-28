@@ -53,28 +53,31 @@ class AiStudio {
       });
     });
 
-    // Enhance Prompt
-    this.enhanceBtn.addEventListener('click', async () => {
-      const prompt = this.promptInput.value.trim();
-      if (!prompt) {
-        window.showToast('Please type a prompt first to enhance', 'info');
-        return;
-      }
-
-      try {
-        const originalText = this.enhanceBtn.innerHTML;
-        this.enhanceBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enhancing...';
-        
-        const res = await ApiService.enhancePrompt(prompt);
-        if (res.success && res.enhanced) {
-          this.promptInput.value = res.enhanced;
-          window.showToast('Prompt enhanced with artistic descriptors!', 'success');
+    // 1-Click Prompt Idea Chips
+    document.querySelectorAll('.prompt-idea-chip').forEach(chip => {
+      chip.addEventListener('click', (e) => {
+        const text = e.currentTarget.getAttribute('data-prompt');
+        if (this.promptInput) {
+          this.promptInput.value = text;
+          window.showToast('Prompt idea loaded! Click Generate to create.', 'success');
         }
-        this.enhanceBtn.innerHTML = originalText;
-      } catch (err) {
-        window.showToast('Failed to enhance prompt', 'error');
-      }
+      });
     });
+
+    // Magic Enhance Prompt
+    if (this.enhanceBtn) {
+      this.enhanceBtn.addEventListener('click', async () => {
+        const prompt = this.promptInput.value.trim();
+        if (!prompt) {
+          this.promptInput.value = 'A golden hour portrait of a futuristic traveler, cinematic lighting, 8k resolution, photorealistic';
+          window.showToast('Magic prompt generated!', 'success');
+          return;
+        }
+
+        this.promptInput.value = `${prompt}, highly detailed, 8k resolution, cinematic lighting, photorealistic, trending on artstation`;
+        window.showToast('Prompt enhanced with quality modifiers!', 'success');
+      });
+    }
 
     // Generate AI Image Button
     this.generateBtn.addEventListener('click', () => this.generate());

@@ -1,5 +1,5 @@
 /**
- * VISION AI - GALLERY & CREATION HISTORY MODULE
+ * PIXORA AI - GALLERY & CREATION HISTORY MODULE
  */
 
 class HistoryGallery {
@@ -70,7 +70,7 @@ class HistoryGallery {
       if (this.selectedImage) {
         const a = document.createElement('a');
         a.href = this.selectedImage.url;
-        a.download = `VisionAI-${Date.now()}.png`;
+        a.download = `PixoraAI-${Date.now()}.png`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -81,8 +81,8 @@ class HistoryGallery {
       if (!this.selectedImage) return;
 
       const shareData = {
-        title: this.selectedImage.originalName || 'VisionAI Artwork',
-        text: this.selectedImage.prompt || 'Check out my AI artwork created with VisionAI!',
+        title: this.selectedImage.originalName || 'PixoraAI Artwork',
+        text: this.selectedImage.prompt || 'Check out my AI artwork created with PixoraAI!',
         url: window.location.origin + this.selectedImage.url
       };
 

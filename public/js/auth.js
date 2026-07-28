@@ -1,5 +1,5 @@
 /**
- * VISION AI - AUTHENTICATION MODULE
+ * PIXORA AI - AUTHENTICATION MODULE
  */
 
 class AuthManager {

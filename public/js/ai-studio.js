@@ -1,5 +1,5 @@
 /**
- * VISION AI - AI STUDIO GENERATOR MODULE
+ * PIXORA AI - AI STUDIO GENERATOR MODULE
  */
 
 class AiStudio {
@@ -93,7 +93,7 @@ class AiStudio {
       if (this.currentGeneratedImage) {
         const a = document.createElement('a');
         a.href = this.currentGeneratedImage.url;
-        a.download = `VisionAI-${Date.now()}.png`;
+        a.download = `PixoraAI-${Date.now()}.png`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);

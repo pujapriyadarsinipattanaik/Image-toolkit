@@ -1,10 +1,10 @@
 /**
- * VISION AI - THEME SWITCHER MODULE (DARK / LIGHT MODE)
+ * PIXORA AI - THEME SWITCHER MODULE (DARK / LIGHT MODE)
  */
 
 class ThemeManager {
   constructor() {
-    this.currentTheme = localStorage.getItem('visionai_theme') || 'dark';
+    this.currentTheme = localStorage.getItem('pixora_theme') || 'dark';
     this.init();
   }
 
@@ -26,7 +26,7 @@ class ThemeManager {
 
   toggle() {
     this.currentTheme = this.currentTheme === 'dark' ? 'light' : 'dark';
-    localStorage.setItem('visionai_theme', this.currentTheme);
+    localStorage.setItem('pixora_theme', this.currentTheme);
     this.applyTheme(this.currentTheme);
     this.updateBtnIcon();
     window.showToast(`Switched to ${this.currentTheme.toUpperCase()} theme`, 'info');

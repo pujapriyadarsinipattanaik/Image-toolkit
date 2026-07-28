@@ -354,7 +354,7 @@ exports.applyWatermark = async (req, res) => {
       return res.status(400).json({ success: false, message: 'No image file uploaded' });
     }
 
-    const text = req.body.text || '© VisionAI Studio';
+    const text = req.body.text || '© PixoraAI Studio';
     const color = req.body.color || '#ffffff';
     const opacity = parseFloat(req.body.opacity) || 0.6;
     const fontSize = parseInt(req.body.fontSize) || 36;

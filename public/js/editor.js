@@ -1,5 +1,5 @@
 /**
- * VISION AI - CANVAS STUDIO & IMAGE EDITOR ENGINE
+ * PIXORA AI - CANVAS STUDIO & IMAGE EDITOR ENGINE
  */
 
 class CanvasEditor {
@@ -379,7 +379,7 @@ class CanvasEditor {
     if (!this.loadedImage) return;
 
     this.saveState();
-    const text = this.wmTextInput ? this.wmTextInput.value.trim() : '© VisionAI Studio';
+    const text = this.wmTextInput ? this.wmTextInput.value.trim() : '© PixoraAI Studio';
     const color = this.wmTextColor ? this.wmTextColor.value : '#ffffff';
     const fontSize = this.wmFontSize ? parseInt(this.wmFontSize.value) : 36;
 
@@ -631,7 +631,7 @@ class CanvasEditor {
 
     const link = document.createElement('a');
     link.href = dataUrl;
-    link.download = `VisionAI-${this.loadedFilename.replace(/\.[^/.]+$/, "")}.${format}`;
+    link.download = `PixoraAI-${this.loadedFilename.replace(/\.[^/.]+$/, "")}.${format}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

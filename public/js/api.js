@@ -1,19 +1,19 @@
 /**
- * VISION AI - API SERVICE CLIENT MODULE
+ * PIXORA AI - API SERVICE CLIENT MODULE
  */
 
 const API_BASE_URL = '/api';
 
 class ApiService {
   static getToken() {
-    return localStorage.getItem('visionai_token') || '';
+    return localStorage.getItem('pixora_ai_token') || '';
   }
 
   static setToken(token) {
     if (token) {
-      localStorage.setItem('visionai_token', token);
+      localStorage.setItem('pixora_ai_token', token);
     } else {
-      localStorage.removeItem('visionai_token');
+      localStorage.removeItem('pixora_ai_token');
     }
   }
 

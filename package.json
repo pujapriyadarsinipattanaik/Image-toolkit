@@ -1,0 +1,37 @@
+{
+  "name": "ai-image-toolkit",
+  "version": "1.1.0",
+  "description": "Full-stack AI Image Toolkit & Image Utilities suite with compression, format conversion (JPG, PNG, WebP, HEIC to JPG), resizing, crop, rotate/flip, base64 generator, AI generation, and canvas studio.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "keywords": [
+    "ai",
+    "image-toolkit",
+    "sharp",
+    "heic-convert",
+    "image-converter",
+    "image-compression",
+    "express",
+    "mongodb"
+  ],
+  "author": "AI Developer",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.6.8",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "heic-convert": "^2.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.3.1",
+    "multer": "^1.4.5-lts.1",
+    "sharp": "^0.33.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
+  }
+}

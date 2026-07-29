@@ -767,10 +767,28 @@
                 </button>
               </div>
 
-              <!-- 5. STICKERS & TEXT PANEL -->
+              <!-- 5. STICKERS & GRAPHICS PANEL -->
               <div id="panel-stickers" class="tool-panel">
                 <h3>Text & Graphic Stickers (24+ Icons)</h3>
-                <p class="tool-desc">Click any sticker below, then click or drag on your image canvas to place it.</p>
+                <p class="tool-desc">Click any sticker below, adjust size, then click on your canvas to place it.</p>
+
+                <!-- STICKER SIZE SLIDER (BIG / SMALL) -->
+                <div class="slider-control">
+                  <div class="slider-header">
+                    <span>Sticker Size (Big / Small)</span>
+                    <span id="stickerSizeVal">60px</span>
+                  </div>
+                  <input type="range" id="stickerSizeRange" min="15" max="250" value="60" class="slider-input">
+                </div>
+
+                <div class="flex-align-gap mb-3">
+                  <button id="undoStickerBtn" class="btn btn-secondary btn-sm">
+                    <i class="fa-solid fa-rotate-left"></i> Remove Last Sticker
+                  </button>
+                  <button id="clearStickersBtn" class="btn btn-danger btn-sm">
+                    <i class="fa-solid fa-trash-can"></i> Remove All Stickers
+                  </button>
+                </div>
 
                 <div class="sticker-chips-grid">
                   <div class="sticker-chip active" data-sticker="⭐">⭐</div>
@@ -803,7 +821,7 @@
               <!-- 6. BACKGROUND REMOVER & REPLACEMENT PANEL -->
               <div id="panel-bg" class="tool-panel">
                 <h3>AI Background Studio</h3>
-                <p class="tool-desc">Remove background and replace with new solid colors, gradients, or custom images.</p>
+                <p class="tool-desc">Remove background and replace with any solid color, preset palette, or custom image.</p>
 
                 <div class="slider-control">
                   <div class="slider-header">
@@ -827,18 +845,36 @@
                   <i class="fa-solid fa-scissors"></i> 1-Click Background Remover
                 </button>
 
-                <!-- NEW BACKGROUND REPLACEMENT OPTIONS -->
+                <!-- FULL CUSTOM COLOR PALETTE & PICKER -->
                 <div class="form-group mt-3">
-                  <label class="form-label">Replace Background Color</label>
+                  <label class="form-label">Replace Background (Pick ANY Custom Color)</label>
+                  
+                  <div class="flex-align-gap mb-2">
+                    <input type="color" id="customBgColorPicker" value="#00f2fe" style="width:44px; height:38px; border:2px solid rgba(255,255,255,0.2); border-radius:8px; cursor:pointer; background:none; padding:2px;">
+                    <span class="subtext">Click box to open full color wheel</span>
+                  </div>
+
                   <div class="chip-group">
                     <button class="chip bg-replace-chip" data-color="transparent">🏁 Transparent</button>
-                    <button class="chip bg-replace-chip" data-color="#0d0f17">🖤 Dark</button>
                     <button class="chip bg-replace-chip" data-color="#ffffff">🤍 White</button>
-                    <button class="chip bg-replace-chip" data-color="#00f2fe">🩵 Cyan</button>
-                    <button class="chip bg-replace-chip" data-color="#7f00ff">💜 Purple</button>
+                    <button class="chip bg-replace-chip" data-color="#0d0f17">🖤 Dark</button>
                     <button class="chip bg-replace-chip" data-color="#ff0844">🔴 Red</button>
                     <button class="chip bg-replace-chip" data-color="#10b981">🟢 Green</button>
+                    <button class="chip bg-replace-chip" data-color="#3b82f6">🔵 Blue</button>
+                    <button class="chip bg-replace-chip" data-color="#eab308">🟡 Yellow</button>
+                    <button class="chip bg-replace-chip" data-color="#ec4899">🩷 Pink</button>
+                    <button class="chip bg-replace-chip" data-color="#8b5cf6">💜 Purple</button>
+                    <button class="chip bg-replace-chip" data-color="#f97316">🟠 Orange</button>
+                    <button class="chip bg-replace-chip" data-color="#06b6d4">🩵 Cyan</button>
                   </div>
+                </div>
+
+                <!-- CUSTOM IMAGE BACKGROUND UPLOAD -->
+                <div class="form-group mt-2">
+                  <button id="triggerBgUploadBtn" class="btn btn-secondary btn-block">
+                    <i class="fa-solid fa-image"></i> Upload Custom Background Image
+                  </button>
+                  <input type="file" id="customBgImageInput" accept="image/*" class="hidden">
                 </div>
               </div>
 

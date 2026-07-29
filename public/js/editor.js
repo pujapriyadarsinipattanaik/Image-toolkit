@@ -79,10 +79,13 @@ class CanvasEditor {
     // Filter Cards
     this.filterCards = document.querySelectorAll('.filter-card');
 
-    // Background Removal
+    // Background Removal & Replacements
     this.bgToleranceRange = document.getElementById('bgToleranceRange');
     this.bgKeyMode = document.getElementById('bgKeyMode');
     this.processBgRemovalBtn = document.getElementById('processBgRemovalBtn');
+    this.customBgColorPicker = document.getElementById('customBgColorPicker');
+    this.triggerBgUploadBtn = document.getElementById('triggerBgUploadBtn');
+    this.customBgImageInput = document.getElementById('customBgImageInput');
 
     // Eraser
     this.brushSizeRange = document.getElementById('brushSizeRange');
@@ -102,6 +105,13 @@ class CanvasEditor {
 
     this.addTextBtn = document.getElementById('addTextBtn');
     this.stickerChips = document.querySelectorAll('.sticker-chip');
+    this.stickerSizeRange = document.getElementById('stickerSizeRange');
+    this.undoStickerBtn = document.getElementById('undoStickerBtn');
+    this.clearStickersBtn = document.getElementById('clearStickersBtn');
+
+    this.activeSticker = '⭐';
+    this.stickerSize = 60;
+    this.placedStickers = [];
   }
 
   bindEvents() {
@@ -247,7 +257,7 @@ class CanvasEditor {
       this.processBgRemovalBtn.addEventListener('click', () => this.removeBackground());
     }
 
-    // Background Replacement Color Chips
+    // Background Replacement Color Chips & Color Picker
     document.querySelectorAll('.bg-replace-chip').forEach(chip => {
       chip.addEventListener('click', (e) => {
         document.querySelectorAll('.bg-replace-chip').forEach(c => c.classList.remove('active'));
@@ -256,6 +266,19 @@ class CanvasEditor {
         this.replaceBackgroundColor(color);
       });
     });
+
+    if (this.customBgColorPicker) {
+      this.customBgColorPicker.addEventListener('input', (e) => {
+        this.replaceBackgroundColor(e.target.value);
+      });
+    }
+
+    if (this.triggerBgUploadBtn) {
+      this.triggerBgUploadBtn.addEventListener('click', () => this.customBgImageInput.click());
+    }
+    if (this.customBgImageInput) {
+      this.customBgImageInput.addEventListener('change', (e) => this.handleCustomBgUpload(e));
+    }
 
     // Eraser brush slider
     if (this.brushSizeRange) {
@@ -285,13 +308,23 @@ class CanvasEditor {
       this.applyWatermarkBtn.addEventListener('click', () => this.addWatermarkText());
     }
 
-    // Stickers
+    // Stickers & Controls
+    if (this.stickerSizeRange) {
+      this.stickerSizeRange.addEventListener('input', (e) => {
+        this.stickerSize = parseInt(e.target.value);
+        const val = document.getElementById('stickerSizeVal');
+        if (val) val.textContent = `${this.stickerSize}px`;
+      });
+    }
+    if (this.undoStickerBtn) this.undoStickerBtn.addEventListener('click', () => this.undoLastSticker());
+    if (this.clearStickersBtn) this.clearStickersBtn.addEventListener('click', () => this.clearAllStickers());
+
     this.stickerChips.forEach(chip => {
       chip.addEventListener('click', (e) => {
         this.stickerChips.forEach(c => c.classList.remove('active'));
         e.currentTarget.classList.add('active');
         this.activeSticker = e.currentTarget.getAttribute('data-sticker');
-        window.showToast(`Sticker ${this.activeSticker} selected. Click or drag on image to place it.`, 'info');
+        window.showToast(`Sticker ${this.activeSticker} selected (${this.stickerSize}px). Click on image to place it.`, 'info');
       });
     });
   }
@@ -421,23 +454,83 @@ class CanvasEditor {
     this.maskCtx.fillRect(x + width - handleSize/2, y + height - handleSize/2, handleSize, handleSize);
   }
 
-  // Stamp Sticker at Mouse Coordinate (x, y)
+  // Stamp Graphic Sticker at Mouse Coordinate (x, y) with dynamic size (Big / Small)
   stampStickerAt(x, y, isNewAction = true) {
     if (!this.loadedImage || !this.activeSticker) return;
 
     if (isNewAction) this.saveState();
 
-    this.ctx.drawImage(this.loadedImage, 0, 0, this.mainCanvas.width, this.mainCanvas.height);
-    this.applyCurrentFiltersAndAdjustments();
+    const size = this.stickerSize || 60;
 
     this.ctx.save();
-    this.ctx.font = `${Math.round(this.mainCanvas.width * 0.08)}px Arial`;
+    this.ctx.font = `${size}px Arial, "Segoe UI Emoji", sans-serif`;
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
     this.ctx.fillText(this.activeSticker, x, y);
     this.ctx.restore();
 
+    this.placedStickers.push({ sticker: this.activeSticker, x, y, size });
     this.lastStickerPos = { x, y };
+  }
+
+  // Remove / Undo Last Placed Sticker
+  undoLastSticker() {
+    if (this.placedStickers.length > 0) {
+      this.placedStickers.pop();
+    }
+    this.undo();
+    window.showToast('Last sticker removed', 'info');
+  }
+
+  // Clear / Remove All Placed Stickers from Image
+  clearAllStickers() {
+    if (!this.loadedImage) return;
+    this.saveState();
+    this.placedStickers = [];
+    this.applyCurrentFiltersAndAdjustments();
+    window.showToast('All stickers removed from image', 'info');
+  }
+
+  // Handle Custom Background Image Upload
+  handleCustomBgUpload(e) {
+    const file = e.target.files[0];
+    if (!file || !this.loadedImage) {
+      window.showToast('Please load an image first before setting background', 'warning');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const bgImg = new Image();
+      bgImg.onload = () => {
+        this.saveState();
+        const width = this.mainCanvas.width;
+        const height = this.mainCanvas.height;
+
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = width;
+        tempCanvas.height = height;
+        const tempCtx = tempCanvas.getContext('2d');
+
+        // Draw custom uploaded background image scaled to canvas
+        tempCtx.drawImage(bgImg, 0, 0, width, height);
+        tempCtx.drawImage(this.mainCanvas, 0, 0);
+
+        this.ctx.clearRect(0, 0, width, height);
+        this.ctx.drawImage(tempCanvas, 0, 0);
+
+        const updatedImg = new Image();
+        updatedImg.onload = () => {
+          this.loadedImage = updatedImg;
+          this.originalImageData = this.ctx.getImageData(0, 0, width, height);
+        };
+        updatedImg.src = tempCanvas.toDataURL('image/png');
+
+        window.showToast('Custom background image applied successfully!', 'success');
+      };
+      bgImg.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
   }
 
   // Stamp Watermark Text at Mouse Coordinate (x, y)

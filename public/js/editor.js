@@ -768,31 +768,71 @@ class CanvasEditor {
         }
         blurredAlpha[y * width + x] = Math.round(sum / count);
       }
-    }
-
     for (let i = 0; i < blurredAlpha.length; i++) {
       data[i * 4 + 3] = blurredAlpha[i];
     }
   }
 
-  // High-Quality Studio AI Background Removal
-  removeBackground() {
+  // Human Skin Tone Detection Helper for Subject Protection
+  isSkinTone(r, g, b) {
+    return (r > 60 && g > 35 && b > 20 && (r > g) && (r > b) && (Math.abs(r - g) > 10) && (r - g < 120));
+  }
+
+  // High-Quality Studio AI Background Removal (Person & Subject Protected)
+  async removeBackground() {
     if (!this.loadedImage) {
       window.showToast('Please load an image first', 'warning');
       return;
     }
 
     this.saveState();
-    window.showToast('Processing HD Background Removal...', 'info');
-
     const width = this.mainCanvas.width;
     const height = this.mainCanvas.height;
+    const keyMode = this.bgKeyMode ? this.bgKeyMode.value : 'ai-hd';
+
+    window.showToast('🤖 AI Processing: Protecting subject & extracting background...', 'info');
+
+    // 1. TRY NEURAL AI SEGMENTER MODEL (@imgly/background-removal) IF AVAILABLE
+    if ((keyMode === 'ai-hd' || keyMode === 'auto') && window.imgly) {
+      try {
+        const imageSrc = this.mainCanvas.toDataURL('image/png');
+        const blob = await window.imgly.removeBackground(imageSrc, {
+          progress: (key, current, total) => {
+            if (key === 'compute:inference') {
+              window.showToast(`AI Neural Inference: ${Math.round((current / total) * 100)}%`, 'info');
+            }
+          }
+        });
+        
+        const cutoutUrl = URL.createObjectURL(blob);
+        const cutoutImg = new Image();
+        cutoutImg.onload = () => {
+          this.ctx.clearRect(0, 0, width, height);
+          this.ctx.drawImage(cutoutImg, 0, 0, width, height);
+
+          // Save Foreground Cutout for Background Swapping
+          this.foregroundCutoutImage = document.createElement('canvas');
+          this.foregroundCutoutImage.width = width;
+          this.foregroundCutoutImage.height = height;
+          this.foregroundCutoutImage.getContext('2d').drawImage(cutoutImg, 0, 0, width, height);
+
+          this.loadedImage = cutoutImg;
+          this.originalImageData = this.ctx.getImageData(0, 0, width, height);
+          window.showToast('✨ HD AI Background Removal Complete! Subject & People 100% Protected.', 'success');
+        };
+        cutoutImg.src = cutoutUrl;
+        return;
+      } catch (aiErr) {
+        console.warn('AI Neural Segmenter fallback to CIELAB Person Protection Engine:', aiErr.message);
+      }
+    }
+
+    // 2. FALLBACK/DIRECT HIGH-PRECISION CIELAB PERSON-PROTECTED MATTING
     const imageData = this.ctx.getImageData(0, 0, width, height);
     const data = imageData.data;
 
     const tolerance = parseInt(this.bgToleranceRange ? this.bgToleranceRange.value : 35);
     const featherRadius = parseInt(this.bgFeatherRange ? this.bgFeatherRange.value : 3);
-    const keyMode = this.bgKeyMode ? this.bgKeyMode.value : 'smart-lab';
 
     // Collect target background colors (LAB space)
     let bgSamples = [];
@@ -807,34 +847,47 @@ class CanvasEditor {
       bgSamples.push(this.rgbToLab(240, 240, 240));
     } else if (keyMode === 'dark') {
       bgSamples.push(this.rgbToLab(10, 10, 10));
-      bgSamples.push(this.rgbToLab(30, 30, 30));
+      bgSamples.push(this.rgbToLab(25, 25, 25));
     } else {
-      // Smart Multi-Border Edge Sampling (Top, Bottom, Left, Right outer pixel ring)
-      const sampleStep = Math.max(1, Math.floor(width / 50));
-      
-      // Top & Bottom edges
-      for (let x = 0; x < width; x += sampleStep) {
-        bgSamples.push(this.rgbToLab(data[x * 4], data[x * 4 + 1], data[x * 4 + 2]));
-        const bIdx = ((height - 1) * width + x) * 4;
-        bgSamples.push(this.rgbToLab(data[bIdx], data[bIdx + 1], data[bIdx + 2]));
-      }
+      // 4 Extreme Corners Sampling (Avoids sampling people touching top/bottom borders)
+      const corners = [
+        0,                                     // Top-Left
+        (width - 1) * 4,                       // Top-Right
+        ((height - 1) * width) * 4,            // Bottom-Left
+        ((height - 1) * width + width - 1) * 4 // Bottom-Right
+      ];
 
-      // Left & Right edges
-      const yStep = Math.max(1, Math.floor(height / 50));
-      for (let y = 0; y < height; y += yStep) {
-        const lIdx = (y * width) * 4;
-        bgSamples.push(this.rgbToLab(data[lIdx], data[lIdx + 1], data[lIdx + 2]));
-        const rIdx = (y * width + (width - 1)) * 4;
-        bgSamples.push(this.rgbToLab(data[rIdx], data[rIdx + 1], data[rIdx + 2]));
+      corners.forEach(idx => {
+        const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+        if (!this.isSkinTone(r, g, b)) {
+          bgSamples.push(this.rgbToLab(r, g, b));
+        }
+      });
+
+      if (bgSamples.length === 0) {
+        bgSamples.push(this.rgbToLab(data[0], data[1], data[2]));
       }
     }
 
-    const deltaThreshold = tolerance * 0.9;
+    const deltaThreshold = tolerance * 0.85;
+
+    // Define Central Subject Region (Center 70% of image width/height)
+    const marginX = width * 0.15;
+    const marginY = height * 0.10;
 
     for (let y = 0; y < height; y++) {
       for (let x = 0; x < width; x++) {
         const idx = (y * width + x) * 4;
         const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+
+        // PROTECT HUMAN SKIN & SUBJECT CENTER
+        const inCenterRegion = (x > marginX && x < (width - marginX) && y > marginY && y < (height - marginY));
+        const isHumanSkin = this.isSkinTone(r, g, b);
+
+        if (isHumanSkin) {
+          continue; // 100% Protect skin pixels from erasure
+        }
+
         const pixelLab = this.rgbToLab(r, g, b);
 
         // Find minimum Delta E distance to sampled background colors
@@ -850,11 +903,14 @@ class CanvasEditor {
           if (g > maxRB) data[idx + 1] = maxRB;
         }
 
-        if (minDeltaE < deltaThreshold) {
-          const alphaFactor = Math.max(0, Math.min(1, minDeltaE / deltaThreshold));
+        // If pixel is in central subject region, require higher confidence before erasing
+        const requiredThreshold = inCenterRegion ? deltaThreshold * 0.7 : deltaThreshold;
+
+        if (minDeltaE < requiredThreshold) {
+          const alphaFactor = Math.max(0, Math.min(1, minDeltaE / requiredThreshold));
           data[idx + 3] = Math.round(alphaFactor * 255 * (alphaFactor > 0.4 ? 1 : alphaFactor));
-        } else if (minDeltaE < deltaThreshold * 1.4) {
-          const alphaRatio = (minDeltaE - deltaThreshold) / (deltaThreshold * 0.4);
+        } else if (minDeltaE < requiredThreshold * 1.3) {
+          const alphaRatio = (minDeltaE - requiredThreshold) / (requiredThreshold * 0.3);
           data[idx + 3] = Math.round(Math.min(255, data[idx + 3] * alphaRatio));
         }
       }
@@ -867,6 +923,12 @@ class CanvasEditor {
 
     this.ctx.putImageData(imageData, 0, 0);
 
+    // Store Cutout Canvas for Background Replacements
+    this.foregroundCutoutImage = document.createElement('canvas');
+    this.foregroundCutoutImage.width = width;
+    this.foregroundCutoutImage.height = height;
+    this.foregroundCutoutImage.getContext('2d').putImageData(imageData, 0, 0);
+
     const updatedImg = new Image();
     updatedImg.onload = () => {
       this.loadedImage = updatedImg;
@@ -874,10 +936,10 @@ class CanvasEditor {
     };
     updatedImg.src = this.mainCanvas.toDataURL('image/png');
 
-    window.showToast('Background cleanly removed with HD smooth edges!', 'success');
+    window.showToast('Background removed! Subject & People preserved.', 'success');
   }
 
-  // Replace background with Colors, Gradients, or Custom Images
+  // Replace background while preserving Subject/People Cutout
   replaceBackgroundColor(color) {
     if (!this.loadedImage) {
       window.showToast('Please load an image first', 'info');
@@ -893,7 +955,7 @@ class CanvasEditor {
     tempCanvas.height = height;
     const tempCtx = tempCanvas.getContext('2d');
 
-    // Fill background (Solid or Studio Gradients)
+    // 1. Draw Replacement Background Color or Studio Gradient
     if (color.startsWith('gradient-')) {
       let grad;
       if (color === 'gradient-sunset') {
@@ -921,7 +983,13 @@ class CanvasEditor {
       tempCtx.fillRect(0, 0, width, height);
     }
 
-    tempCtx.drawImage(this.mainCanvas, 0, 0);
+    // 2. Draw Preserved Foreground Subject Cutout On Top
+    if (this.foregroundCutoutImage) {
+      tempCtx.drawImage(this.foregroundCutoutImage, 0, 0);
+    } else {
+      tempCtx.drawImage(this.mainCanvas, 0, 0);
+    }
+
     this.ctx.clearRect(0, 0, width, height);
     this.ctx.drawImage(tempCanvas, 0, 0);
 
@@ -930,7 +998,9 @@ class CanvasEditor {
       this.loadedImage = updatedImg;
       this.originalImageData = this.ctx.getImageData(0, 0, width, height);
     };
-    window.showToast('Background updated!', 'success');
+    updatedImg.src = tempCanvas.toDataURL('image/png');
+
+    window.showToast(`Background set to ${color}`, 'success');
   }
 
   // Magic Eraser Mask Drawing

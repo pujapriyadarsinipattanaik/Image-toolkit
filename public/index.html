@@ -808,7 +808,8 @@
                 <div class="form-group">
                   <label class="form-label">Removal Engine & Mode</label>
                   <select id="bgKeyMode" class="form-control">
-                    <option value="smart-lab">⚡ Perceptual CIELAB AI Matting (Fast HD)</option>
+                    <option value="ai-hd" selected>🤖 HD AI Person & Subject Protector (Deep Neural AI)</option>
+                    <option value="smart-lab">⚡ Perceptual CIELAB Edge Matting</option>
                     <option value="picker">🎯 Eyedropper Color Picker (Click Canvas)</option>
                     <option value="green">🟩 Green Screen Chroma Key</option>
                     <option value="white">⚪ White / Studio Light Backgrounds</option>
@@ -1178,6 +1179,7 @@
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- JAVASCRIPT MODULES -->
+  <script src="https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/dist/index.umd.js"></script>
   <script src="/js/theme.js"></script>
   <script type="module" src="/js/firebase-config.js"></script>
   <script src="/js/api.js"></script>

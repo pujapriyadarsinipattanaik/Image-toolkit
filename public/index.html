@@ -800,69 +800,44 @@
                 </div>
               </div>
 
-              <!-- 6. HIGH-QUALITY AI BACKGROUND REMOVER & REPLACEMENT PANEL -->
+              <!-- 6. BACKGROUND REMOVER & REPLACEMENT PANEL -->
               <div id="panel-bg" class="tool-panel">
                 <h3>AI Background Studio</h3>
-                <p class="tool-desc">Studio-quality AI background removal & HD subject matting with smooth edge anti-aliasing.</p>
+                <p class="tool-desc">Remove background and replace with new solid colors, gradients, or custom images.</p>
+
+                <div class="slider-control">
+                  <div class="slider-header">
+                    <span>Alpha Tolerance</span>
+                    <span id="bgToleranceVal">30</span>
+                  </div>
+                  <input type="range" id="bgToleranceRange" min="5" max="90" value="30" class="slider-input">
+                </div>
 
                 <div class="form-group">
-                  <label class="form-label">Removal Engine & Mode</label>
+                  <label class="form-label">Key Removal Target</label>
                   <select id="bgKeyMode" class="form-control">
-                    <option value="ai-hd" selected>🤖 HD AI Person & Subject Protector (Deep Neural AI)</option>
-                    <option value="smart-lab">⚡ Perceptual CIELAB Edge Matting</option>
-                    <option value="picker">🎯 Eyedropper Color Picker (Click Canvas)</option>
-                    <option value="green">🟩 Green Screen Chroma Key</option>
-                    <option value="white">⚪ White / Studio Light Backgrounds</option>
-                    <option value="dark">⚫ Dark / Shadow Backgrounds</option>
+                    <option value="auto">Smart Auto Edge Detect</option>
+                    <option value="white">White / Light Backgrounds</option>
+                    <option value="dark">Dark / Black Backgrounds</option>
+                    <option value="green">Green Screen Chroma Key</option>
                   </select>
                 </div>
 
-                <!-- EYEDROPPER COLOR PICKER CONTROL -->
-                <div id="eyedropperContainer" class="form-group hidden">
-                  <label class="form-label">Picked Target Color</label>
-                  <div class="flex-align-gap">
-                    <button id="pickBgColorBtn" class="btn btn-secondary btn-sm">
-                      <i class="fa-solid fa-eye-dropper"></i> Click Image to Pick Color
-                    </button>
-                    <div id="selectedBgColorPreview" style="width:28px; height:28px; border-radius:6px; border:2px solid rgba(255,255,255,0.2); background-color:#ffffff;"></div>
-                  </div>
-                </div>
-
-                <div class="slider-control">
-                  <div class="slider-header">
-                    <span>Alpha Tolerance / Sensitivity</span>
-                    <span id="bgToleranceVal">35</span>
-                  </div>
-                  <input type="range" id="bgToleranceRange" min="5" max="90" value="35" class="slider-input">
-                </div>
-
-                <div class="slider-control">
-                  <div class="slider-header">
-                    <span>Edge Feathering (Smooth Anti-Aliasing)</span>
-                    <span id="bgFeatherVal">3px</span>
-                  </div>
-                  <input type="range" id="bgFeatherRange" min="0" max="20" value="3" class="slider-input">
-                </div>
-
-                <button id="processBgRemovalBtn" class="btn btn-primary btn-block mt-2">
-                  <i class="fa-solid fa-wand-magic-sparkles"></i> Remove Background Now
+                <button id="processBgRemovalBtn" class="btn btn-primary btn-block">
+                  <i class="fa-solid fa-scissors"></i> 1-Click Background Remover
                 </button>
 
-                <!-- BACKGROUND REPLACEMENT OPTIONS -->
+                <!-- NEW BACKGROUND REPLACEMENT OPTIONS -->
                 <div class="form-group mt-3">
-                  <label class="form-label">Replace Background</label>
+                  <label class="form-label">Replace Background Color</label>
                   <div class="chip-group">
-                    <button class="chip bg-replace-chip active" data-color="transparent">🏁 Transparent</button>
+                    <button class="chip bg-replace-chip" data-color="transparent">🏁 Transparent</button>
                     <button class="chip bg-replace-chip" data-color="#0d0f17">🖤 Dark</button>
                     <button class="chip bg-replace-chip" data-color="#ffffff">🤍 White</button>
                     <button class="chip bg-replace-chip" data-color="#00f2fe">🩵 Cyan</button>
                     <button class="chip bg-replace-chip" data-color="#7f00ff">💜 Purple</button>
                     <button class="chip bg-replace-chip" data-color="#ff0844">🔴 Red</button>
                     <button class="chip bg-replace-chip" data-color="#10b981">🟢 Green</button>
-                    <button class="chip bg-replace-chip" data-color="gradient-sunset">🌅 Sunset</button>
-                    <button class="chip bg-replace-chip" data-color="gradient-cyber">🚀 Neon Cyber</button>
-                    <button class="chip bg-replace-chip" data-color="gradient-studio">📷 Studio Blue</button>
-                    <button class="chip bg-replace-chip" data-color="gradient-gold">✨ Gold Luxury</button>
                   </div>
                 </div>
               </div>
@@ -1179,7 +1154,6 @@
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- JAVASCRIPT MODULES -->
-  <script src="https://cdn.jsdelivr.net/npm/@imgly/background-removal@1.5.5/dist/index.umd.js"></script>
   <script src="/js/theme.js"></script>
   <script type="module" src="/js/firebase-config.js"></script>
   <script src="/js/api.js"></script>

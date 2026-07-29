@@ -79,16 +79,10 @@ class CanvasEditor {
     // Filter Cards
     this.filterCards = document.querySelectorAll('.filter-card');
 
-    // Background Removal & Matting
+    // Background Removal
     this.bgToleranceRange = document.getElementById('bgToleranceRange');
-    this.bgFeatherRange = document.getElementById('bgFeatherRange');
     this.bgKeyMode = document.getElementById('bgKeyMode');
     this.processBgRemovalBtn = document.getElementById('processBgRemovalBtn');
-    this.pickBgColorBtn = document.getElementById('pickBgColorBtn');
-    this.eyedropperContainer = document.getElementById('eyedropperContainer');
-    this.selectedBgColorPreview = document.getElementById('selectedBgColorPreview');
-    this.pickedBgColor = { r: 255, g: 255, b: 255 };
-    this.isPickingBgColor = false;
 
     // Eraser
     this.brushSizeRange = document.getElementById('brushSizeRange');
@@ -249,27 +243,6 @@ class CanvasEditor {
         if (val) val.textContent = e.target.value;
       });
     }
-    if (this.bgFeatherRange) {
-      this.bgFeatherRange.addEventListener('input', (e) => {
-        const val = document.getElementById('bgFeatherVal');
-        if (val) val.textContent = `${e.target.value}px`;
-      });
-    }
-    if (this.bgKeyMode) {
-      this.bgKeyMode.addEventListener('change', (e) => {
-        if (e.target.value === 'picker') {
-          if (this.eyedropperContainer) this.eyedropperContainer.classList.remove('hidden');
-          this.activateEyedropperMode();
-        } else {
-          if (this.eyedropperContainer) this.eyedropperContainer.classList.add('hidden');
-          this.isPickingBgColor = false;
-          this.updateCanvasMouseBehavior();
-        }
-      });
-    }
-    if (this.pickBgColorBtn) {
-      this.pickBgColorBtn.addEventListener('click', () => this.activateEyedropperMode());
-    }
     if (this.processBgRemovalBtn) {
       this.processBgRemovalBtn.addEventListener('click', () => this.removeBackground());
     }
@@ -335,23 +308,11 @@ class CanvasEditor {
     };
   }
 
-  activateEyedropperMode() {
-    this.isPickingBgColor = true;
-    if (this.maskCanvas) {
-      this.maskCanvas.style.pointerEvents = 'auto';
-      this.maskCanvas.style.cursor = 'crosshair';
-    }
-    window.showToast('Eyedropper active: Click anywhere on the image to select target background color.', 'info');
-  }
-
   // Configure mouse pointer-events and cursor based on active sidebar tool tab
   updateCanvasMouseBehavior() {
     if (!this.maskCanvas) return;
 
-    if (this.isPickingBgColor || (this.currentToolPanel === 'panel-bg' && this.bgKeyMode && this.bgKeyMode.value === 'picker')) {
-      this.maskCanvas.style.pointerEvents = 'auto';
-      this.maskCanvas.style.cursor = 'crosshair';
-    } else if (this.currentToolPanel === 'panel-eraser') {
+    if (this.currentToolPanel === 'panel-eraser') {
       this.maskCanvas.style.pointerEvents = 'auto';
       this.maskCanvas.style.cursor = 'crosshair';
       window.showToast('Magic Eraser active. Brush over unwanted elements.', 'info');
@@ -379,11 +340,6 @@ class CanvasEditor {
     this.isMouseDown = true;
     const pos = this.getCanvasCoords(e);
 
-    if (this.isPickingBgColor || (this.currentToolPanel === 'panel-bg' && this.bgKeyMode && this.bgKeyMode.value === 'picker')) {
-      this.pickColorFromCanvas(pos);
-      return;
-    }
-
     if (this.currentToolPanel === 'panel-eraser') {
       this.startMaskDraw(pos);
     } else if (this.currentToolPanel === 'panel-crop') {
@@ -395,19 +351,6 @@ class CanvasEditor {
     } else if (this.currentToolPanel === 'panel-watermark') {
       this.stampWatermarkAt(pos.x, pos.y);
     }
-  }
-
-  pickColorFromCanvas(pos) {
-    if (!this.ctx || !this.loadedImage) return;
-    const pixel = this.ctx.getImageData(pos.x, pos.y, 1, 1).data;
-    this.pickedBgColor = { r: pixel[0], g: pixel[1], b: pixel[2] };
-    const hex = `#${((1 << 24) + (pixel[0] << 16) + (pixel[1] << 8) + pixel[2]).toString(16).slice(1)}`;
-    if (this.selectedBgColorPreview) {
-      this.selectedBgColorPreview.style.backgroundColor = hex;
-    }
-    this.isPickingBgColor = false;
-    this.updateCanvasMouseBehavior();
-    window.showToast(`Target color picked: RGB(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`, 'success');
   }
 
   // Unified MouseMove Event
@@ -711,223 +654,50 @@ class CanvasEditor {
     });
   }
 
-  // CIELAB Color Conversion Helpers for Perceptual Color Matching
-  rgbToLab(r, g, b) {
-    let rN = r / 255, gN = g / 255, bN = b / 255;
-    rN = rN > 0.04045 ? Math.pow((rN + 0.055) / 1.055, 2.4) : rN / 12.92;
-    gN = gN > 0.04045 ? Math.pow((gN + 0.055) / 1.055, 2.4) : gN / 12.92;
-    bN = bN > 0.04045 ? Math.pow((bN + 0.055) / 1.055, 2.4) : bN / 12.92;
-
-    let x = (rN * 0.4124 + gN * 0.3576 + bN * 0.1805) * 100 / 95.047;
-    let y = (rN * 0.2126 + gN * 0.7152 + bN * 0.0722) * 100 / 100.000;
-    let z = (rN * 0.0193 + gN * 0.1192 + bN * 0.9505) * 100 / 108.883;
-
-    x = x > 0.008856 ? Math.cbrt(x) : (7.787 * x) + (16 / 116);
-    y = y > 0.008856 ? Math.cbrt(y) : (7.787 * y) + (16 / 116);
-    z = z > 0.008856 ? Math.cbrt(z) : (7.787 * z) + (16 / 116);
-
-    return {
-      l: (116 * y) - 16,
-      a: 500 * (x - y),
-      b: 200 * (y - z)
-    };
-  }
-
-  cielabDeltaE(lab1, lab2) {
-    return Math.sqrt(
-      Math.pow(lab1.l - lab2.l, 2) +
-      Math.pow(lab1.a - lab2.a, 2) +
-      Math.pow(lab1.b - lab2.b, 2)
-    );
-  }
-
-  // Alpha Feathering / Smooth Anti-Aliasing Filter
-  applyAlphaFeathering(data, width, height, featherRadius) {
-    if (featherRadius <= 0) return;
-
-    const alphaMap = new Uint8ClampedArray(width * height);
-    for (let i = 0; i < alphaMap.length; i++) {
-      alphaMap[i] = data[i * 4 + 3];
-    }
-
-    const blurredAlpha = new Uint8ClampedArray(width * height);
-    const r = Math.min(featherRadius, 10);
-
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        let sum = 0, count = 0;
-        for (let dy = -r; dy <= r; dy++) {
-          const ny = y + dy;
-          if (ny < 0 || ny >= height) continue;
-          for (let dx = -r; dx <= r; dx++) {
-            const nx = x + dx;
-            if (nx < 0 || nx >= width) continue;
-            sum += alphaMap[ny * width + nx];
-            count++;
-          }
-        }
-        blurredAlpha[y * width + x] = Math.round(sum / count);
-      }
-    for (let i = 0; i < blurredAlpha.length; i++) {
-      data[i * 4 + 3] = blurredAlpha[i];
-    }
-  }
-
-  // Human Skin Tone Detection Helper for Subject Protection
-  isSkinTone(r, g, b) {
-    return (r > 60 && g > 35 && b > 20 && (r > g) && (r > b) && (Math.abs(r - g) > 10) && (r - g < 120));
-  }
-
-  // High-Quality Studio AI Background Removal (Person & Subject Protected)
-  async removeBackground() {
-    if (!this.loadedImage) {
-      window.showToast('Please load an image first', 'warning');
-      return;
-    }
+  // Smart AI Background Removal Algorithm
+  removeBackground() {
+    if (!this.loadedImage) return;
 
     this.saveState();
     const width = this.mainCanvas.width;
     const height = this.mainCanvas.height;
-    const keyMode = this.bgKeyMode ? this.bgKeyMode.value : 'ai-hd';
-
-    window.showToast('🤖 AI Processing: Protecting subject & extracting background...', 'info');
-
-    // 1. TRY NEURAL AI SEGMENTER MODEL (@imgly/background-removal) IF AVAILABLE
-    if ((keyMode === 'ai-hd' || keyMode === 'auto') && window.imgly) {
-      try {
-        const imageSrc = this.mainCanvas.toDataURL('image/png');
-        const blob = await window.imgly.removeBackground(imageSrc, {
-          progress: (key, current, total) => {
-            if (key === 'compute:inference') {
-              window.showToast(`AI Neural Inference: ${Math.round((current / total) * 100)}%`, 'info');
-            }
-          }
-        });
-        
-        const cutoutUrl = URL.createObjectURL(blob);
-        const cutoutImg = new Image();
-        cutoutImg.onload = () => {
-          this.ctx.clearRect(0, 0, width, height);
-          this.ctx.drawImage(cutoutImg, 0, 0, width, height);
-
-          // Save Foreground Cutout for Background Swapping
-          this.foregroundCutoutImage = document.createElement('canvas');
-          this.foregroundCutoutImage.width = width;
-          this.foregroundCutoutImage.height = height;
-          this.foregroundCutoutImage.getContext('2d').drawImage(cutoutImg, 0, 0, width, height);
-
-          this.loadedImage = cutoutImg;
-          this.originalImageData = this.ctx.getImageData(0, 0, width, height);
-          window.showToast('✨ HD AI Background Removal Complete! Subject & People 100% Protected.', 'success');
-        };
-        cutoutImg.src = cutoutUrl;
-        return;
-      } catch (aiErr) {
-        console.warn('AI Neural Segmenter fallback to CIELAB Person Protection Engine:', aiErr.message);
-      }
-    }
-
-    // 2. FALLBACK/DIRECT HIGH-PRECISION CIELAB PERSON-PROTECTED MATTING
     const imageData = this.ctx.getImageData(0, 0, width, height);
     const data = imageData.data;
 
-    const tolerance = parseInt(this.bgToleranceRange ? this.bgToleranceRange.value : 35);
-    const featherRadius = parseInt(this.bgFeatherRange ? this.bgFeatherRange.value : 3);
+    const tolerance = parseInt(this.bgToleranceRange ? this.bgToleranceRange.value : 30);
+    const keyMode = this.bgKeyMode ? this.bgKeyMode.value : 'auto';
 
-    // Collect target background colors (LAB space)
-    let bgSamples = [];
-
-    if (keyMode === 'picker' && this.pickedBgColor) {
-      bgSamples.push(this.rgbToLab(this.pickedBgColor.r, this.pickedBgColor.g, this.pickedBgColor.b));
-    } else if (keyMode === 'green') {
-      bgSamples.push(this.rgbToLab(0, 255, 0));
-      bgSamples.push(this.rgbToLab(15, 230, 15));
+    let sampleR = 255, sampleG = 255, sampleB = 255;
+    if (keyMode === 'auto') {
+      sampleR = (data[0] + data[(width - 1) * 4] + data[(height - 1) * width * 4]) / 3;
+      sampleG = (data[1] + data[(width - 1) * 4 + 1] + data[(height - 1) * width * 4 + 1]) / 3;
+      sampleB = (data[2] + data[(width - 1) * 4 + 2] + data[(height - 1) * width * 4 + 2]) / 3;
     } else if (keyMode === 'white') {
-      bgSamples.push(this.rgbToLab(255, 255, 255));
-      bgSamples.push(this.rgbToLab(240, 240, 240));
+      sampleR = 240; sampleG = 240; sampleB = 240;
     } else if (keyMode === 'dark') {
-      bgSamples.push(this.rgbToLab(10, 10, 10));
-      bgSamples.push(this.rgbToLab(25, 25, 25));
-    } else {
-      // 4 Extreme Corners Sampling (Avoids sampling people touching top/bottom borders)
-      const corners = [
-        0,                                     // Top-Left
-        (width - 1) * 4,                       // Top-Right
-        ((height - 1) * width) * 4,            // Bottom-Left
-        ((height - 1) * width + width - 1) * 4 // Bottom-Right
-      ];
-
-      corners.forEach(idx => {
-        const r = data[idx], g = data[idx + 1], b = data[idx + 2];
-        if (!this.isSkinTone(r, g, b)) {
-          bgSamples.push(this.rgbToLab(r, g, b));
-        }
-      });
-
-      if (bgSamples.length === 0) {
-        bgSamples.push(this.rgbToLab(data[0], data[1], data[2]));
-      }
+      sampleR = 20; sampleG = 20; sampleB = 20;
+    } else if (keyMode === 'green') {
+      sampleR = 0; sampleG = 255; sampleB = 0;
     }
 
-    const deltaThreshold = tolerance * 0.85;
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
 
-    // Define Central Subject Region (Center 70% of image width/height)
-    const marginX = width * 0.15;
-    const marginY = height * 0.10;
+      const diff = Math.sqrt(
+        Math.pow(r - sampleR, 2) +
+        Math.pow(g - sampleG, 2) +
+        Math.pow(b - sampleB, 2)
+      );
 
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const idx = (y * width + x) * 4;
-        const r = data[idx], g = data[idx + 1], b = data[idx + 2];
-
-        // PROTECT HUMAN SKIN & SUBJECT CENTER
-        const inCenterRegion = (x > marginX && x < (width - marginX) && y > marginY && y < (height - marginY));
-        const isHumanSkin = this.isSkinTone(r, g, b);
-
-        if (isHumanSkin) {
-          continue; // 100% Protect skin pixels from erasure
-        }
-
-        const pixelLab = this.rgbToLab(r, g, b);
-
-        // Find minimum Delta E distance to sampled background colors
-        let minDeltaE = Infinity;
-        for (let i = 0; i < bgSamples.length; i++) {
-          const dE = this.cielabDeltaE(pixelLab, bgSamples[i]);
-          if (dE < minDeltaE) minDeltaE = dE;
-        }
-
-        // Green Spill Suppression for Green Screen
-        if (keyMode === 'green' && g > r && g > b) {
-          const maxRB = Math.max(r, b);
-          if (g > maxRB) data[idx + 1] = maxRB;
-        }
-
-        // If pixel is in central subject region, require higher confidence before erasing
-        const requiredThreshold = inCenterRegion ? deltaThreshold * 0.7 : deltaThreshold;
-
-        if (minDeltaE < requiredThreshold) {
-          const alphaFactor = Math.max(0, Math.min(1, minDeltaE / requiredThreshold));
-          data[idx + 3] = Math.round(alphaFactor * 255 * (alphaFactor > 0.4 ? 1 : alphaFactor));
-        } else if (minDeltaE < requiredThreshold * 1.3) {
-          const alphaRatio = (minDeltaE - requiredThreshold) / (requiredThreshold * 0.3);
-          data[idx + 3] = Math.round(Math.min(255, data[idx + 3] * alphaRatio));
-        }
+      if (diff < tolerance * 2.5) {
+        const alpha = Math.max(0, (diff / (tolerance * 2.5)) * 255);
+        data[i + 3] = alpha;
       }
-    }
-
-    // Apply Edge Feathering for smooth anti-aliased cutout
-    if (featherRadius > 0) {
-      this.applyAlphaFeathering(data, width, height, featherRadius);
     }
 
     this.ctx.putImageData(imageData, 0, 0);
-
-    // Store Cutout Canvas for Background Replacements
-    this.foregroundCutoutImage = document.createElement('canvas');
-    this.foregroundCutoutImage.width = width;
-    this.foregroundCutoutImage.height = height;
-    this.foregroundCutoutImage.getContext('2d').putImageData(imageData, 0, 0);
 
     const updatedImg = new Image();
     updatedImg.onload = () => {
@@ -936,15 +706,12 @@ class CanvasEditor {
     };
     updatedImg.src = this.mainCanvas.toDataURL('image/png');
 
-    window.showToast('Background removed! Subject & People preserved.', 'success');
+    window.showToast('Background removed successfully!', 'success');
   }
 
-  // Replace background while preserving Subject/People Cutout
+  // Replace background color behind subject
   replaceBackgroundColor(color) {
-    if (!this.loadedImage) {
-      window.showToast('Please load an image first', 'info');
-      return;
-    }
+    if (!this.loadedImage) return;
 
     this.saveState();
     const width = this.mainCanvas.width;
@@ -955,41 +722,12 @@ class CanvasEditor {
     tempCanvas.height = height;
     const tempCtx = tempCanvas.getContext('2d');
 
-    // 1. Draw Replacement Background Color or Studio Gradient
-    if (color.startsWith('gradient-')) {
-      let grad;
-      if (color === 'gradient-sunset') {
-        grad = tempCtx.createLinearGradient(0, 0, width, height);
-        grad.addColorStop(0, '#ff7e5f');
-        grad.addColorStop(1, '#feb47b');
-      } else if (color === 'gradient-cyber') {
-        grad = tempCtx.createLinearGradient(0, 0, width, height);
-        grad.addColorStop(0, '#00c6ff');
-        grad.addColorStop(1, '#0072ff');
-      } else if (color === 'gradient-studio') {
-        grad = tempCtx.createRadialGradient(width / 2, height / 2, 50, width / 2, height / 2, width);
-        grad.addColorStop(0, '#2b5876');
-        grad.addColorStop(1, '#4e4376');
-      } else if (color === 'gradient-gold') {
-        grad = tempCtx.createLinearGradient(0, 0, width, height);
-        grad.addColorStop(0, '#bf953f');
-        grad.addColorStop(0.5, '#fcf6ba');
-        grad.addColorStop(1, '#b38728');
-      }
-      tempCtx.fillStyle = grad;
-      tempCtx.fillRect(0, 0, width, height);
-    } else if (color !== 'transparent') {
+    if (color !== 'transparent') {
       tempCtx.fillStyle = color;
       tempCtx.fillRect(0, 0, width, height);
     }
 
-    // 2. Draw Preserved Foreground Subject Cutout On Top
-    if (this.foregroundCutoutImage) {
-      tempCtx.drawImage(this.foregroundCutoutImage, 0, 0);
-    } else {
-      tempCtx.drawImage(this.mainCanvas, 0, 0);
-    }
-
+    tempCtx.drawImage(this.mainCanvas, 0, 0);
     this.ctx.clearRect(0, 0, width, height);
     this.ctx.drawImage(tempCanvas, 0, 0);
 
@@ -1000,7 +738,7 @@ class CanvasEditor {
     };
     updatedImg.src = tempCanvas.toDataURL('image/png');
 
-    window.showToast(`Background set to ${color}`, 'success');
+    window.showToast(`Background set to ${color === 'transparent' ? 'transparent' : color}`, 'success');
   }
 
   // Magic Eraser Mask Drawing

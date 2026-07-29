@@ -132,9 +132,18 @@ class Application {
       this.recentCreationsGrid.innerHTML = `
         <div class="empty-state glass-card" style="grid-column: 1/-1; padding: 2.5rem; text-align: center;">
           <i class="fa-regular fa-image" style="font-size: 2.5rem; margin-bottom: 0.75rem; opacity: 0.4;"></i>
-          <p>Please sign in to save and track your creations.</p>
+          <p style="margin-bottom: 1rem;">Please sign in to save and track your creations.</p>
+          <button type="button" class="btn btn-primary btn-sm open-auth-btn">
+            <i class="fa-solid fa-right-to-bracket"></i> Sign In / Register Now
+          </button>
         </div>
       `;
+      const openAuthBtn = this.recentCreationsGrid.querySelector('.open-auth-btn');
+      if (openAuthBtn) {
+        openAuthBtn.addEventListener('click', () => {
+          if (window.Auth) window.Auth.showModal();
+        });
+      }
       return;
     }
 

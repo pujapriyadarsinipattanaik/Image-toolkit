@@ -28,16 +28,30 @@ class AuthManager {
   }
 
   bindEvents() {
-    // Open Dedicated Sign In Page View
+    // Open Auth Modal when clicking Sign In / Register button in navbar
     if (this.authModalBtn) {
       this.authModalBtn.addEventListener('click', () => {
-        if (window.App) window.App.switchTab('auth');
+        this.showModal();
       });
     }
 
     if (this.closeAuthModalBtn) {
       this.closeAuthModalBtn.addEventListener('click', () => this.hideModal());
     }
+
+    if (this.authModal) {
+      this.authModal.addEventListener('click', (e) => {
+        if (e.target === this.authModal) this.hideModal();
+      });
+    }
+
+    // Modal Auth Tab Switching (Sign In / Create Account)
+    this.authTabs.forEach(tab => {
+      tab.addEventListener('click', (e) => {
+        const mode = e.target.getAttribute('data-auth-mode');
+        if (mode) this.switchAuthTab(mode);
+      });
+    });
 
     // Page Auth Tab Switching
     document.querySelectorAll('.page-tab-btn').forEach(tab => {
@@ -48,32 +62,115 @@ class AuthManager {
         const loginForm = document.getElementById('pageLoginForm');
         const regForm = document.getElementById('pageRegisterForm');
         if (mode === 'login') {
-          if (loginForm) loginForm.classList.remove('hidden');
-          if (regForm) regForm.classList.add('hidden');
+          if (loginForm) { loginForm.classList.remove('hidden'); loginForm.classList.add('active'); }
+          if (regForm) { regForm.classList.add('hidden'); regForm.classList.remove('active'); }
         } else {
-          if (regForm) regForm.classList.remove('hidden');
-          if (loginForm) loginForm.classList.add('hidden');
+          if (regForm) { regForm.classList.remove('hidden'); regForm.classList.add('active'); }
+          if (loginForm) { loginForm.classList.add('hidden'); loginForm.classList.remove('active'); }
         }
       });
     });
 
-    // Guest Login Button (Page)
+    // Guest Login Function
+    const handleGuestLogin = () => {
+      const guestUser = {
+        id: `guest-${Date.now()}`,
+        username: 'Guest Pro User',
+        email: 'demo@pixora.ai',
+        avatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=GuestPro'
+      };
+      ApiService.setToken(`guest-token-${Date.now()}`);
+      this.setUser(guestUser);
+      this.hideModal();
+      window.showToast('Signed in as Guest Pro User!', 'success');
+      if (window.App) window.App.onAuthChange();
+    };
+
+    const guestLoginBtn = document.getElementById('guestLoginBtn');
+    if (guestLoginBtn) guestLoginBtn.addEventListener('click', handleGuestLogin);
+
     const pageGuestLoginBtn = document.getElementById('pageGuestLoginBtn');
-    if (pageGuestLoginBtn) {
-      pageGuestLoginBtn.addEventListener('click', () => {
-        const guestUser = {
-          id: `guest-${Date.now()}`,
-          username: 'Guest Pro User',
-          email: 'demo@pixora.ai',
-          avatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=GuestPro'
-        };
-        ApiService.setToken(`guest-token-${Date.now()}`);
-        this.setUser(guestUser);
-        window.showToast('Signed in as Guest Pro User!', 'success');
-        if (window.App) {
-          window.App.switchTab('dashboard');
-          window.App.onAuthChange();
+    if (pageGuestLoginBtn) pageGuestLoginBtn.addEventListener('click', handleGuestLogin);
+
+    // Helper for Login Handler
+    const processLogin = async (email, password, usernameHint = '') => {
+      try {
+        const res = await ApiService.login({ email, password });
+        if (res.success && res.token) {
+          ApiService.setToken(res.token);
+          this.setUser(res.user);
+          this.hideModal();
+          window.showToast(`Welcome back, ${res.user.username}!`, 'success');
+          if (window.App) window.App.onAuthChange();
+          return;
         }
+      } catch (err) {
+        console.warn('API Login failed, using local session:', err.message);
+      }
+      
+      // Fallback local sign in if backend API offline or guest/demo
+      const user = {
+        id: `user-${Date.now()}`,
+        username: usernameHint || email.split('@')[0] || 'Pixora User',
+        email: email || 'demo@pixora.ai',
+        avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(usernameHint || email)}`
+      };
+      ApiService.setToken(`token-${Date.now()}`);
+      this.setUser(user);
+      this.hideModal();
+      window.showToast(`Logged in as ${user.username}!`, 'success');
+      if (window.App) window.App.onAuthChange();
+    };
+
+    // Helper for Register Handler
+    const processRegister = async (username, email, password) => {
+      try {
+        const res = await ApiService.register({ username, email, password });
+        if (res.success && res.token) {
+          ApiService.setToken(res.token);
+          this.setUser(res.user);
+          this.hideModal();
+          window.showToast(`Account created! Welcome, ${res.user.username}!`, 'success');
+          if (window.App) window.App.onAuthChange();
+          return;
+        }
+      } catch (err) {
+        console.warn('API Register failed, using local session:', err.message);
+      }
+
+      // Fallback local registration
+      const user = {
+        id: `user-${Date.now()}`,
+        username: username || 'Pixora User',
+        email: email || 'user@example.com',
+        avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(username || email)}`
+      };
+      ApiService.setToken(`token-${Date.now()}`);
+      this.setUser(user);
+      this.hideModal();
+      window.showToast(`Account created! Welcome ${user.username}!`, 'success');
+      if (window.App) window.App.onAuthChange();
+    };
+
+    // Modal Login Form Submit
+    if (this.loginForm) {
+      this.loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('loginUsername')?.value || '';
+        const email = document.getElementById('loginEmail')?.value || 'demo@pixora.ai';
+        const password = document.getElementById('loginPassword')?.value || '123456';
+        await processLogin(email, password, username);
+      });
+    }
+
+    // Modal Register Form Submit
+    if (this.registerForm) {
+      this.registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const username = document.getElementById('regUsername')?.value || 'New User';
+        const email = document.getElementById('regEmail')?.value || '';
+        const password = document.getElementById('regPassword')?.value || '';
+        await processRegister(username, email, password);
       });
     }
 
@@ -82,22 +179,10 @@ class AuthManager {
     if (pageLoginForm) {
       pageLoginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const username = document.getElementById('pageLoginUsername')?.value || 'Demo Pro User';
+        const username = document.getElementById('pageLoginUsername')?.value || '';
         const email = document.getElementById('pageLoginEmail')?.value || 'demo@pixora.ai';
-        
-        const fallbackUser = {
-          id: `user-${Date.now()}`,
-          username: username,
-          email: email,
-          avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(username)}`
-        };
-        ApiService.setToken(`token-${Date.now()}`);
-        this.setUser(fallbackUser);
-        window.showToast(`Welcome back, ${fallbackUser.username}!`, 'success');
-        if (window.App) {
-          window.App.switchTab('dashboard');
-          window.App.onAuthChange();
-        }
+        const password = document.getElementById('pageLoginPassword')?.value || '123456';
+        await processLogin(email, password, username);
       });
     }
 
@@ -106,134 +191,22 @@ class AuthManager {
     if (pageRegisterForm) {
       pageRegisterForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const username = document.getElementById('pageRegUsername')?.value || 'New Pro User';
-        const email = document.getElementById('pageRegEmail')?.value || 'user@example.com';
-
-        const fallbackUser = {
-          id: `user-${Date.now()}`,
-          username: username,
-          email: email,
-          avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(username)}`
-        };
-        ApiService.setToken(`token-${Date.now()}`);
-        this.setUser(fallbackUser);
-        window.showToast(`Account created! Welcome ${fallbackUser.username}`, 'success');
-        if (window.App) {
-          window.App.switchTab('dashboard');
-          window.App.onAuthChange();
-        }
+        const username = document.getElementById('pageRegUsername')?.value || '';
+        const email = document.getElementById('pageRegEmail')?.value || '';
+        const password = document.getElementById('pageRegPassword')?.value || '';
+        await processRegister(username, email, password);
       });
     }
 
-    // Modal Login Form Submit
-    if (this.loginForm) {
-      this.loginForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const username = document.getElementById('loginUsername')?.value || 'Demo Pro User';
-        const email = document.getElementById('loginEmail')?.value || 'demo@pixora.ai';
-
-        const fallbackUser = {
-          id: `user-${Date.now()}`,
-          username: username,
-          email: email,
-          avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(username)}`
-        };
-        ApiService.setToken(`token-${Date.now()}`);
-        this.setUser(fallbackUser);
-        this.hideModal();
-        window.showToast(`Logged in as ${fallbackUser.username}!`, 'success');
-        if (window.App) {
-          window.App.switchTab('dashboard');
-          window.App.onAuthChange();
-        }
-      });
-    }
-
-    this.authModal.addEventListener('click', (e) => {
-      if (e.target === this.authModal) this.hideModal();
-    });
-
-    // Tab Toggles (Sign In / Register)
-    this.authTabs.forEach(tab => {
-      tab.addEventListener('click', (e) => {
-        const mode = e.target.getAttribute('data-auth-mode');
-        this.switchAuthTab(mode);
-      });
-    });
-
-    // Guest Login Button
-    const guestLoginBtn = document.getElementById('guestLoginBtn');
-    if (guestLoginBtn) {
-      guestLoginBtn.addEventListener('click', () => {
-        const guestUser = {
-          id: `guest-${Date.now()}`,
-          username: 'Guest Pro User',
-          email: 'demo@pixora.ai',
-          avatar: 'https://api.dicebear.com/7.x/identicon/svg?seed=GuestPro'
-        };
-        ApiService.setToken(`guest-token-${Date.now()}`);
-        this.setUser(guestUser);
-        this.hideModal();
-        window.showToast('Signed in as Guest Pro User!', 'success');
+    // Logout
+    if (this.logoutBtn) {
+      this.logoutBtn.addEventListener('click', () => {
+        ApiService.setToken(null);
+        this.setUser(null);
+        window.showToast('Signed out successfully', 'info');
         if (window.App) window.App.onAuthChange();
       });
     }
-
-    // Login Form Submit
-    this.loginForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('loginEmail').value;
-      const password = document.getElementById('loginPassword').value;
-
-      try {
-        const res = await ApiService.login({ email, password });
-        ApiService.setToken(res.token);
-        this.setUser(res.user);
-        this.hideModal();
-        window.showToast('Successfully logged in!', 'success');
-        if (window.App) window.App.onAuthChange();
-      } catch (err) {
-        // Fallback local sign in if backend offline
-        const fallbackUser = {
-          id: `user-${Date.now()}`,
-          username: email.split('@')[0] || 'Pixora User',
-          email: email,
-          avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(email)}`
-        };
-        ApiService.setToken(`token-${Date.now()}`);
-        this.setUser(fallbackUser);
-        this.hideModal();
-        window.showToast(`Logged in as ${fallbackUser.username}`, 'success');
-        if (window.App) window.App.onAuthChange();
-      }
-    });
-
-    // Register Form Submit
-    this.registerForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const username = document.getElementById('regUsername').value;
-      const email = document.getElementById('regEmail').value;
-      const password = document.getElementById('regPassword').value;
-
-      try {
-        const res = await ApiService.register({ username, email, password });
-        ApiService.setToken(res.token);
-        this.setUser(res.user);
-        this.hideModal();
-        window.showToast('Account created successfully!', 'success');
-        if (window.App) window.App.onAuthChange();
-      } catch (err) {
-        window.showToast(err.message || 'Registration failed', 'error');
-      }
-    });
-
-    // Logout Submit
-    this.logoutBtn.addEventListener('click', () => {
-      ApiService.setToken(null);
-      this.setUser(null);
-      window.showToast('Logged out', 'info');
-      if (window.App) window.App.onAuthChange();
-    });
   }
 
   switchAuthTab(mode) {

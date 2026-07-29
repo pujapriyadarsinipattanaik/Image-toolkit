@@ -15,7 +15,7 @@ import { getStorage } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-
 // Firebase App Configuration
 const firebaseConfig = {
   apiKey: "AIzaSyAh3Dw89WBnXgdhai8ihqjlxq1l5M5hnZE",
-  authDomain: "image-toolkit-40d9e.firebaseapp.com",
+  authDomain: "ai-image-tool-kit.firebaseapp.com",
   projectId: "image-toolkit-40d9e",
   storageBucket: "image-toolkit-40d9e.firebasestorage.app",
   messagingSenderId: "274743730757",

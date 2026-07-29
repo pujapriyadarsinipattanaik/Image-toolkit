@@ -14,3 +14,7 @@ uploads/*
 # Operating System
 .DS_Store
 Thumbs.db
+
+# Firebase CLI cache
+.firebase/
+

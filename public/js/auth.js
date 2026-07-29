@@ -94,6 +94,29 @@ class AuthManager {
 
     // Helper for Login Handler
     const processLogin = async (email, password, usernameHint = '') => {
+      // 1. Try Firebase Auth if available
+      if (window.firebaseService && email && password) {
+        try {
+          const fbRes = await window.firebaseService.signInWithEmailAndPassword(window.firebaseService.auth, email, password);
+          const fbUser = fbRes.user;
+          const user = {
+            id: fbUser.uid,
+            username: fbUser.displayName || usernameHint || email.split('@')[0],
+            email: fbUser.email,
+            avatar: fbUser.photoURL || `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(fbUser.email)}`
+          };
+          ApiService.setToken(`fb-token-${fbUser.uid}`);
+          this.setUser(user);
+          this.hideModal();
+          window.showToast(`Welcome back, ${user.username}! (Firebase)`, 'success');
+          if (window.App) window.App.onAuthChange();
+          return;
+        } catch (fbErr) {
+          console.warn('Firebase Auth login skipped/failed:', fbErr.message);
+        }
+      }
+
+      // 2. Try Local API Login
       try {
         const res = await ApiService.login({ email, password });
         if (res.success && res.token) {
@@ -108,7 +131,7 @@ class AuthManager {
         console.warn('API Login failed, using local session:', err.message);
       }
       
-      // Fallback local sign in if backend API offline or guest/demo
+      // 3. Fallback local sign in if backend API offline or guest/demo
       const user = {
         id: `user-${Date.now()}`,
         username: usernameHint || email.split('@')[0] || 'Pixora User',
@@ -124,6 +147,32 @@ class AuthManager {
 
     // Helper for Register Handler
     const processRegister = async (username, email, password) => {
+      // 1. Try Firebase Auth Registration if available
+      if (window.firebaseService && email && password) {
+        try {
+          const fbRes = await window.firebaseService.createUserWithEmailAndPassword(window.firebaseService.auth, email, password);
+          const fbUser = fbRes.user;
+          if (username) {
+            await window.firebaseService.updateProfile(fbUser, { displayName: username });
+          }
+          const user = {
+            id: fbUser.uid,
+            username: username || fbUser.email.split('@')[0],
+            email: fbUser.email,
+            avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${encodeURIComponent(fbUser.email)}`
+          };
+          ApiService.setToken(`fb-token-${fbUser.uid}`);
+          this.setUser(user);
+          this.hideModal();
+          window.showToast(`Account created via Firebase! Welcome ${user.username}!`, 'success');
+          if (window.App) window.App.onAuthChange();
+          return;
+        } catch (fbErr) {
+          console.warn('Firebase Auth registration failed:', fbErr.message);
+        }
+      }
+
+      // 2. Try Local API Registration
       try {
         const res = await ApiService.register({ username, email, password });
         if (res.success && res.token) {
@@ -138,7 +187,7 @@ class AuthManager {
         console.warn('API Register failed, using local session:', err.message);
       }
 
-      // Fallback local registration
+      // 3. Fallback local registration
       const user = {
         id: `user-${Date.now()}`,
         username: username || 'Pixora User',
